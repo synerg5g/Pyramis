@@ -90,6 +90,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
     assert(isinstance(struct, dict))
     if not isinstance(base_types, dict):
         print(type(base_types))
+        # handle list with same type name.
     assert(isinstance(base_types, dict))
     
     if usage_indirection:
@@ -118,7 +119,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             final.subs[attr["__id__"]] = nested_
         else:
             # enum type
-            print(f"{attr} likely enum")
+            #print(f"{attr} likely enum")
             final.subs[attr["__type__"]] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
 
     #print(struct)
@@ -155,8 +156,8 @@ def type_from_arg(gx, arg, usage_indirection=None):
                 return final
         assert(isinstance(struct, dict))
         if struct["__name__"] == arg:
-            print(usage_indirection)
-            print(arg)
+            #print(usage_indirection)
+            #print(arg)
             final = reduce_to_type(gx, struct, user_bases, usage_indirection)# base structs will have indirection, thing empty. pain to modify struct parsing to differenciate b/w a BASE and a MEMBER
             return final
     
@@ -178,7 +179,7 @@ def type_from_arg(gx, arg, usage_indirection=None):
     # (more likely user has given an incorrect type)
     #print(f"[{type(arg)}]")
     # likely enum
-    print(f"{arg} not recognised, default to enum")
+    #print(f"{arg} not recognised, default to enum")
     return python.Type(arg, thing=utils.TH_ENUM)
 
     #error.error(f"{arg} is not a valid type for this system.")

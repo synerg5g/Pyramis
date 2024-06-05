@@ -609,6 +609,9 @@ PYRAMIS_ACTIONS = [
 ]
 
 class Preprocessor:
+    '''
+    buggy for dsl comments
+    '''
     def __init__(self, _in, _out):
         self._in = _in
         self._out = _out
@@ -640,9 +643,13 @@ class Preprocessor:
         """
         parts = condition.split(" ", 2)
         if len(parts) == 1:
+            if parts[0][-1] == ")":
+                parts[0] = parts[0][:-1]
             transformed_string = f"('{parts[0]}')"
         else:
             lhs, operator, rhs = parts
+            if rhs[-1] == ")":
+                rhs = rhs[:-1]
             transformed_string = f"('{lhs}' {operator} '{rhs.strip()}')"
 
         return transformed_string
@@ -667,13 +674,13 @@ class Preprocessor:
         if line[0] == "#":
             return f"{tabs * ' '}{line}"
         
-        if line.startswith("@@timer"):
-            # third arg is a timer event.
+        # if line.startswith("@@timer"):
+        #     # third arg is a timer event.
 
         action_list = line.strip().split(
             "(", 1
         )  # ['EVENT eventname', 'arg1, arg2)'] ['IF', 'arg1 = MACRO(....))'
-        action = action_list[0].strip()
+        action = action_list[0].strip()#
         event_check = action_list[0].strip().split(" ")
 
         if len(action_list) > 1:
@@ -693,6 +700,10 @@ class Preprocessor:
 
         if event_check[0] == "EVENT":
             event_name = event_check[1]
+            print(event_name)
+            print(args)
+            if args[-1] == ")":
+                args = args[:-1]
             return f"{tabs * ' '}def {event_name} ({args}):"
 
 
@@ -714,13 +725,14 @@ class Preprocessor:
         elif action in ("IF_PRESENT", "IF_NOT_PRESENT"):
             return f"{tabs * ' '}def {action}({args}):"
 
-        elif action == "ELSE":
+        elif (action == "ELSE:" or action == "ELSE"):
             return f"{tabs * ' '}else:"
         
         elif action in ("PASS", "CONTINUE", "BREAK"):
             return f"{tabs * ' '}{action.lower()}"
 
         elif action in PYRAMIS_ACTIONS:
+            print(action)
             args_list_comma = args.split(",")
             if action == "CREATE_COLLECTION":
                 comma_formatted_args = ",".join(f"{arg.strip()}" for arg in args_list_comma)

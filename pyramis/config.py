@@ -81,6 +81,7 @@ class GlobalInfo:
         self._utility_lib = None
         self.user_utils = None
         self.nf_dsl = self.cwd / f"{self.nf_name}.dsl" # dsl file in cwd.
+        self.py_ast_path = None
         self.init_directories(args)
         self.generate_builtins() # update/create asn_base_types
 
@@ -202,7 +203,7 @@ class GlobalInfo:
                         udf.name = f"__{udf.name}"
                     self.udfs[udf.name]  = udf
         print(f"Parsed {len(self.udfs)} udfs.")
-        print(self.udfs)
+        #print(self.udfs)
 
 
     def generate_builtins(self):
@@ -210,7 +211,7 @@ class GlobalInfo:
         pyramis_parser = utils.Parser(self, self._utility_lib, self.pyramis_message_types_path)
         all_pyramis_types = pyramis_parser.parse_lib()
         self.pyramis_base_types = consolidate_duplicate_types(all_pyramis_types)
-        print(len(self.pyramis_base_types))
+        #print(len(self.pyramis_base_types))
         # for k, v in self.pyramis_base_types.items():
         #     if isinstance(v, list):
         #         print(k)
@@ -221,4 +222,4 @@ class GlobalInfo:
         all_user_types = user_parser.parse_lib()
         self.user_base_types = consolidate_duplicate_types(all_user_types)
 
-        print(f"System has {len(self.pyramis_base_types) + len(self.user_base_types)} valid types.")
+        #print(f"System has {len(self.pyramis_base_types) + len(self.user_base_types)} valid types.")

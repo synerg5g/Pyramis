@@ -33,30 +33,28 @@ class Module(PyObject):
     ast: ast.Module         ast module or None
     node: ast.node          ast Node
     """
-    def __init__(self, filename, relative_filename, node):
+    def __init__(self, filename, node):
         self.filename = pathlib.Path(filename) # full path of the module i.e node.py
         self.name = self.filename.name
         self.path = self.filename.parent
-        self.relative_filename = pathlib.Path(relative_filename)
-        self.relative_path = self.relative_filename.parent
 
         self.ast = None  # to be provided later after analysis
         self.node = node
 
-def find_module(gx, name, basepath):
-    # return full filepath
-    module_name = name
-    module_path = basepath / ".deps"
-    file_path = module_path / f"{module_name}.py"
+# def find_module(gx, name, basepath):
+#     # return full filepath
+#     module_name = name
+#     module_path = basepath / ".deps"
+#     file_path = module_path / f"{module_name}.py"
 
-    filename = None
-    if file_path.is_file():
-        filename = file_path   
+#     filename = None
+#     if file_path.is_file():
+#         filename = file_path   
 
-    if filename is None:
-        raise ModuleNotFoundError("No module named '%s'" % module_name)
+#     if filename is None:
+#         raise ModuleNotFoundError("No module named '%s'" % module_name)
 
-    return filename # Path
+#     return filename # Path
 
 def parse_file(name):
     filebuf = importlib.util.decode_source(open(name, 'rb').read())

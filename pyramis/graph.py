@@ -16,6 +16,7 @@ from . import infer
 from . import python
 from . import utils
 from . import log
+from . import config
 
 # --- global variable mv
 _mv = None
@@ -212,13 +213,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
 def parse_module(gx, node=None):
     """create a Module object"""
+    assert(isinstance(gx, config.GlobalInfo))
     name = gx.py_module_path.stem # name must be of the python file without .py extension.
-    basepath = pathlib.Path(os.getcwd())
-    relative_filename = gx.py_module_path
 
-    filename = python.find_module(gx, name, basepath)
+    filename = gx.py_module_path
 
-    module = python.Module(filename, relative_filename, node)
+    module = python.Module(filename, node)
 
     if module.name in gx.modules:  # cached?
         return gx.modules[module.name]
@@ -228,8 +228,8 @@ def parse_module(gx, node=None):
     module.ast = python.parse_file(module.filename) 
     
     # write ast to .deps/node.ast
-    _ast = f"{gx.cwd}/.deps/{gx.vnf_name}.ast"
-    with open(_ast, "w") as f_ast:
+    gx.py_ast_path = gx._pyramis / f".deps/{gx.nf_name}.ast"
+    with open(gx.py_ast_path, "w") as f_ast:
         f_ast.write(f"{ast.dump(module.ast, indent = 4)}")  # store AST in a new file.
 
     # associate ast-vistor with the module
