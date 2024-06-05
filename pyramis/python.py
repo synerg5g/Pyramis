@@ -111,7 +111,7 @@ class Function:
 class UserDefined:
     def __init__(self, name, ret_type):
         self.name = name
-        self.arg_types = []
+        self.arg_types = [] # list of python types?
         self.ret_type = ret_type
 
 class Variable:
@@ -152,7 +152,7 @@ class Type:
         self.thing = thing  
         self.indirection = indirection # use during translate()
 
-    def contains(self, attr):
+    def _contains(self, attr):
         '''
         Returns True if a given nested asn type
         has a particular string as an attribute,
@@ -162,7 +162,7 @@ class Type:
             return True, self.subs[attr]
         
         for sub in self.subs:
-            res, type = self.subs[sub].contains(attr)
+            res, type = self.subs[sub]._contains(attr)
             if res:
                 return res, type
         return False, None
@@ -172,7 +172,7 @@ class Type:
         If a type contains attr, return
         its type.
         '''
-        _, type = self.contains(attr)
+        _, type = self._contains(attr)
         return type
 
     def __str__(self):

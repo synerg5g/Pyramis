@@ -78,7 +78,19 @@ the ast node, (in this case the ast.Constant representing a ast.Call argument i.
 - All event i.e. python.Function() formals have python type "str" at init.
 - If an ast.Constant.value is a udf name, the subsequent args are assigned types from their udf declarations in gx.udfs. (in visit_constant, check if arg[x] is in gx.udfs. If yes, type from udfs)
 - If an ast.Constant ka action is CREATE_MESSAGE, assign type from arg.
-- 
+- std::vector and fixed size C arrays are treated as 
+type = value type, thing = ARRAY
+--> int **x is treated as an int with indirection level = 2
+
+Pyramis Invariants
+-------------------
+1. Single python.Variable object, "stored" in scope symtab. All other
+objects maintain references to the single instance and can update it at any time. (variables in scope tree may be untyped for certain durations)
+
+
+- EVENTs are list of Pyramis Actions.
+- EVENT is rep via a python.Function object.
+- Every Action has an "action". and set of user attributes with Python.Type().
 
 2. Python types (int, bool, float etc.) are all implemented as Classes in stdlib/typeshed/builtins.pyi
 - types are defined as a large set of methods that can be performed on them. (this set should be significatly smaller for pyramis types) 

@@ -4,16 +4,36 @@ import pathlib
 import re
 from . import python
 from . import utils
+from . import infer
 
-UDF_REGEX = r'^\s*\b\w+\b\s+\b\w+\b\s*\([^;]*\)\s*;' # chatgpt
+UDF_REGEX = r'(?P<return_type>\S+\s*) ([\w_]+)\(([^,]+(?:,\s*[^,]+)*)?\)' # chatgpt
 
 def consolidate_duplicate_types(all_types):
     '''
     1. duplicate types into list.
     2. All unions into a single list.
+    3. returns a dict indexed by typename. below is a rep. k-v pair in a base_types dict.
+        "SynerPMessageHeader_t" :  {    "__name__": "SynerPMessageHeader_t"                                                                          
+                                        "__attributes__": {
+                                            "size": {
+                                                "__id__": "size",
+                                                "__type__": "uint8_t",
+                                                "__thing__": "SIMPLE",
+                                                "__ptr__": 0                                   
+                                            },
+                                            "cmd": {
+                                                "__id__": "cmd",
+                                                "__type__": "_e_SynerPCommand",
+                                                "__thing__": "SIMPLE",
+                                                "__ptr__": 0
+                                            }
+                                        }
+                                    }
+
+    duplicate type names (with different attributes) are stored in a list at the same key.
     '''
     consolidated = {}
-    for struct in all_types:
+    for struct in all_types: # {__name__: "a"}
         name = struct["__name__"]
         if name is None:
             # Handle cases where "__name__" is missing
@@ -46,9 +66,11 @@ class GlobalInfo:
         self.udfs = {}
         self.pyramis_base_types = None
         self.user_base_types = None
+
         # codegen
         self.allfuncs = set()
         self.allvars = set()
+        self.type_cache = {} # built types.
         self.scope_tree = None
 
         self.cwd = self.cwd = pathlib.Path.cwd() # directory that pyramis was called from
@@ -59,11 +81,11 @@ class GlobalInfo:
         self._utility_lib = None
         self.user_utils = None
         self.init_directories(args)
+        self.generate_builtins() # update/create asn_base_types
 
         self.parse_interfaces()
         self.parse_udfs() # 
 
-        self.generate_builtins() # update/create asn_base_types
 
         self.modules = {} # cache of py modules handled just in case
     
@@ -130,16 +152,27 @@ class GlobalInfo:
                 if re.match(UDF_REGEX, line): # XXX Ugly :)
                     line.strip(";")
                     _ret = line.split("(")[0].split()
-                    _func = _ret[-1]
+                    _func = _ret[-1] # name of the func
                     _ret_type = " ".join(e for e in _ret[:-1])
 
                     _ptr = 0
                     if "*" in _ret_type or "*" in _func:
-                        _ptr += 1
+                        _ptr += (_ret_type.count("*") + _func.count("*"))
                         _ret_type = _ret_type.replace("*", "")
                         _func = _func.replace("*", "")
+
+
+                    if "&" in _ret_type or "&" in _func:
+                        _ret_type = _ret_type.replace("&", "")
+                        _func = _func.replace("&", "")
                     
-                    ret_type = python.Type(_ret_type, _ptr)
+                    # found a specific instance of a generic type'
+                    # generic types are the structs in json,
+                    # they have fixed child THING and decay to the
+                    # same location.
+                    # specific instance is assigning a THING to a generic type.
+                    ret_type = infer.type_from_arg(self, _ret_type, _ptr)
+                    #ret_type = python.Type(_ret_type, indirection=_ptr)
                     
                     udf = python.UserDefined(_func, ret_type)
 
@@ -154,16 +187,21 @@ class GlobalInfo:
                         
                         _ptr = 0
                         if "*" in _arg_type or "*" in _a[-1]:
+                            _ptr += (_arg_type.count("*") + _a[-1].count("*"))
                             _arg_type = _arg_type.replace("*", "")
-                            _ptr += 1
+                        
+                        if "&" in _arg_type or "&" in _a[-1]:
+                            _arg_type = _arg_type.replace("&", "")
 
-                        _arg = python.Type(_arg_type, _ptr)
+                        _arg = infer.type_from_arg(self, _arg_type, _ptr)
                         udf.arg_types.append(_arg)
                     
                     # append to gx udf list
                     if udf.name in self.udfs:
                         udf.name = f"__{udf.name}"
                     self.udfs[udf.name]  = udf
+        print(f"Parsed {len(self.udfs)} udfs.")
+        print(self.udfs)
 
 
     def generate_builtins(self):
@@ -172,10 +210,10 @@ class GlobalInfo:
         all_pyramis_types = pyramis_parser.parse_lib()
         self.pyramis_base_types = consolidate_duplicate_types(all_pyramis_types)
         print(len(self.pyramis_base_types))
-        for k, v in self.pyramis_base_types.items():
-            if isinstance(v, list):
-                print(k)
-                print(v)
+        # for k, v in self.pyramis_base_types.items():
+        #     if isinstance(v, list):
+        #         print(k)
+        #         print(v)
         
         # get user-defined types
         user_parser = utils.Parser(self, self.user_utils, self.user_message_types_path)
