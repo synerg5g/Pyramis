@@ -601,9 +601,11 @@ PYRAMIS_ACTIONS = [
     #"ADD",         # XXX not in linking SMF
     #"PRINT",       # XXX redundant SMF
     "APPEND",      # add a value/object to a list end.
-    "PASS"         # XXX dubious
+    "PASS" ,       # XXX dubious
     "BREAK",       # XXX dubious
-    "CONTINUE"     # XXX dubious
+    "CONTINUE" ,    # XXX dubious
+    "TIMER_STOP",
+    "TIMER_START"
 ]
 
 class Preprocessor:
@@ -664,6 +666,9 @@ class Preprocessor:
 
         if line[0] == "#":
             return f"{tabs * ' '}{line}"
+        
+        if line.startswith("@@timer"):
+            # third arg is a timer event.
 
         action_list = line.strip().split(
             "(", 1

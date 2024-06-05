@@ -59,12 +59,12 @@ class Pyramis:
         # for u in gx.udfs.values():
         #     print(f"{u.name}: {[tp.ident for tp in u.arg_types]}"
 
-        if args.debug:
-            self.log.setLevel(logging.DEBUG) # run debug logs
+        # if args.debug:
+        #     self.log.setLevel(logging.DEBUG) # run debug logs
 
-        if args.silent:
-            gx.silent = True
-            self.log.setLevel(logging.WARNING)
+        # if args.silent:
+        #     gx.silent = True
+        #     self.log.setLevel(logging.WARNING)
 
         self.log.debug(gx.nf_dsl)
         self.log.debug(gx.output_dir)
@@ -147,12 +147,14 @@ class Pyramis:
         Create a syntactically correct python equivalent of the Pyramis 
         specification file. Store in .deps/<node>.py
         """
-        path_to_py = self.gx.___pyramis / ".deps"
+        path_to_py = self.gx._pyramis / ".deps"
         path_to_py.mkdir(exist_ok=True)
 
-        _out = path_to_py / f"{self.gx.vnf_name}.py"
+        _out = path_to_py / f"{self.gx.nf_name}.py"
+        print(_out)
         
         _in = self.gx.nf_dsl
+        print(_in)
         
         pre = utils.Preprocessor(_in, _out)
         pre.process()

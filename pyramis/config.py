@@ -57,7 +57,6 @@ class GlobalInfo:
         # env
         self._pyramis = magic
         self.nf_name = args.node # should be present in interfaces.json
-        self.nf_dsl = None # dsl file in cwd.
         self.py_module_path = None
         self.py_module = None
         self.pyramis_message_types_path = self._pyramis / "_pyramis_message_types.json"
@@ -72,6 +71,7 @@ class GlobalInfo:
         self.allvars = set()
         self.type_cache = {} # built types.
         self.scope_tree = None
+        self.timers = [] # timer classes with args. Used to create the expiry_context struct in platform.h
 
         self.cwd = self.cwd = pathlib.Path.cwd() # directory that pyramis was called from
         self.raw_dir = self.cwd / "__TRANSLATE_RAW__" / self.nf_name
@@ -80,6 +80,7 @@ class GlobalInfo:
         self.output_dir = None
         self._utility_lib = None
         self.user_utils = None
+        self.nf_dsl = self.cwd / f"{self.nf_name}.dsl" # dsl file in cwd.
         self.init_directories(args)
         self.generate_builtins() # update/create asn_base_types
 

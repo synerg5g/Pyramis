@@ -127,6 +127,9 @@ In a timer event, the function signature args are converted to
 EVENT forget_user(userID, timer_id) -> void forget_user(timer_expiry_struct_t timer_ctx, struct nfvInstanceData *nfvInst)
 - CONSTRAINT: The pyramis args must exactly match the set of valid timer context attributes.
 
+# --- Codegen for timer
+TIMER_START(<timerID>, <>)
+
 # --- Vocabulary for Pyramis multi-tier Systems
 1. Procedure: A series of messages sent-recd by this NF, terminating with a final response to a sink NF from which no response is expected
 2. Request: A message sent from this NF to a peer NF such that this NF expects a response from the peer. Pyramis indicates a request by specifying the handling of the subsequent response via the `callback` argument of the SEND statement. 

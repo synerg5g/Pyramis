@@ -145,6 +145,15 @@ class Map:
         assert(variable.type) # only refs to typed variables must be added to map
         self.struct.vars[variable.name] = variable
 
+class Timer:
+    '''
+    Used like Map, stores the attributes of the timer_ctx struct.
+    '''
+    def __init__(self, _id, _timeoutsec, _callback):
+        self._id = _id
+        self._timeoutsec = _timeoutsec
+        self._callback = _callback
+
 class Type:
     def __init__(self, ident, thing=None, indirection=None):
         self.ident = ident # typename
