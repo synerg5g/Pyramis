@@ -75,7 +75,7 @@ def get_variable(gx, arg_idx, parent, ident):
     if ident == "true" or ident == "false":
         _type = python.Type("bool")
         return python.Variable(arg_idx, ident, parent, _type)
-    elif is_int(ident):
+    elif is_int(ident) or parent == SET_KEY:
         _type = python.Type("int")
         return python.Variable(arg_idx, ident, parent, _type)
     elif '"' in ident:
@@ -120,7 +120,8 @@ In every visit_call():
     - create the python.Action
     - store all args_strs in a list.
 
-lookahead = [] # SET
+set_typed = []
+set_untyped = []
 common pattern:
 for i, _v in enumerate(args):
     # if used before, returns python.Variable.
@@ -130,16 +131,31 @@ for i, _v in enumerate(args):
         # rare
         var = python.Variable(i, _var, <parent>)
     
+    # we have a variable, could be typed or untyped depending on actions before
+    # the current one.
+    # SET(a, b)
+    # If type(a) known and type(b) known:
+    # - assert t(a) == t(b), error on mismatch
+    # 
+    # If type(a) known and type(b) not known:
+    # - would be strange, trying to set an ident to a pyramis-invalid value
+    #
+    # If type(a) unkown:
+    # - type(b) must be known and type(a) must be set, strange otherwise.
+    # [If either type is known, update the other. If both are known, check
+    # type consistency. If neither are known, (eg SET(userid, procedurekey)), 
+    # store the untyped variable in the scope.
     if parent.action == SET:
-        assert(len(lookahead) <= 1)
-        if not var.type:
-            lookahead.append(var)
-        else:
-            if (var.arg_idx == 0):
-                # error check here?
-            elif (var.arg_idx == 1):
-            
-            lookahead[0].type = var.type # only 2 args allowed in set.
+        if (var.type):
+            set_typed.append(var)
+            if len(set_untyped) == 1:  
+                # 0 untyped 1 typed
+                # var is 1
+                set_untyped[0].type = var.type
+
+        if len(set_types) == 2:
+            assert(typed[0].type.equals(typed[1].type))     
+        
             
     # if var untyped, either used before or this is first occurence.
     if not var.type:
@@ -157,10 +173,20 @@ for i, _v in enumerate(args):
                 # add new type to scope
                 # if a udf type has indirection 1, it just means
                 # that the var.. this is an issue for codegen.
-                infer.add_to_scope(current, var)
+            case SET:
+                set_untyped.append(var)
+                if set_typed == 1:
+                    # 0 typed 1 untyped
+                    var.type = set_typed[0].type
 
+                if len(set_untyped) == 2:
+                    # both unknown, type assign not 
+                    # possible at this stage
+                    pass
+    # scope, set_typed and untyped contain refs to same obj
+    # hence the set modifications will apply to the scope tree itself.         
+    infer.add_to_scope(current, var) 
                 
-    else:
         
                 
                 

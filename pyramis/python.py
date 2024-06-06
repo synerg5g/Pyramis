@@ -162,7 +162,13 @@ class Type:
         self.subs = {} # attr:Type
         self.thing = thing  
         self.indirection = indirection # use during translate()
-
+    
+    def equals(self, other_type):
+        assert(isinstance(other_type, Type))
+        if self.ident == other_type.ident:
+            return True
+        # have some equivalent type rules
+        
     def _contains(self, attr):
         '''
         Returns True if a given nested asn type
