@@ -58,26 +58,156 @@ def default_var(gx, name, parent, mv=None):
 
     return var
 
-# search for an arg in the local scope tree
-# return the python.Variable if found.
-def lookup_scope(gx, arg):
+# mv needs to call only when appropriate
+# eg STORE. dotted attrs must also be stored as is in the scope tree.
+
+def get_variable_from_scope(gx, parent, ident):
+    # search the persistent scope structure
+    # upto the current event.
+    # return variable (typed/untyped) if true, else None
     pass
 
-# mv needs to call only when appropriate
-# eg STORE.
-# dotted attrs must also be stored as is in the scope tree.
-def type_of_arg(gx, arg):
-    # was arg encountered earlier?
-    ref = lookup_scope(gx, arg)
-    if (ref):
-        _type = ref
+# search for an arg in the local scope tree
+# return the python.Variable if found.
+# ident must be the full dotted name
+def get_variable(gx, arg_idx, parent, ident):
+    """
+    if ident == "true" or ident == "false":
+        _type = python.Type("bool")
+        return python.Variable(arg_idx, ident, parent, _type)
+    elif is_int(ident):
+        _type = python.Type("int")
+        return python.Variable(arg_idx, ident, parent, _type)
+    elif '"' in ident:
+        _type = python.Type("string")
+        return python.Variable(arg_idx, ident, parent, _type)
+
+    # store the stem i.e. terminal attribute and root i.e base ident
+    stem = ident.split(".")[-1]
+    root = ident.split(".")[0]
+    dotted = (len(ident.split(".")) > 1)
+
+    # search for exact (dotted or otherwise) name in scope.
+    var = get_variable_from_scope(gx, ident)
+    if (var)
+        return var # typed or untyped simple/dotted ident.
+    else: # exact name not used yet.
+        # non dotted?
+        if not dotted:
+            # this is the first ever encounter - i.e. no python.Var() has ever been created
+            return None 
+        else:
+            # if dotted not found, search for type of root
+            var = get_variable_from_scope(gx, root)
+            # if root of dotted found in scope
+            if (var.type):
+                final_t = var.type.get_typeof(stem)
+                return python.Variable(arg_idx,ident, parent, final_t)
+            else:
+                # invalid attribute access.
+                print("Invalid attribute of {var.type.ident} was accessed.)
+                assert(0)
+    """
+
+
+
+    # return variable.
+
+    pass
+
+"""
+In every visit_call():
+    - create the python.Action
+    - store all args_strs in a list.
+
+lookahead = [] # SET
+common pattern:
+for i, _v in enumerate(args):
+    # if used before, returns python.Variable.
+    # if not, need to create a new python.Variable for this ident
+    var = get_variable(i, _v, <parent>) # typed/untyped
+    if (not var):
+        # rare
+        var = python.Variable(i, _var, <parent>)
+    
+    if parent.action == SET:
+        assert(len(lookahead) <= 1)
+        if not var.type:
+            lookahead.append(var)
+        else:
+            if (var.arg_idx == 0):
+                # error check here?
+            elif (var.arg_idx == 1):
+            
+            lookahead[0].type = var.type # only 2 args allowed in set.
+            
+    # if var untyped, either used before or this is first occurence.
+    if not var.type:
+        # should be able to get a concrete
+        # type from somewhere
+        switch (parent.action):
+            case UDF:
+                name = args[1] # whatever the index is
+                udf = gx.udfs[name]
+
+                # udfs are always typed
+                _type = copy.deepcopy(udf.args[var.get_index()].type)
+                var.type = _type
+
+                # add new type to scope
+                # if a udf type has indirection 1, it just means
+                # that the var.. this is an issue for codegen.
+                infer.add_to_scope(current, var)
+
+                
     else:
-        _type = python.Type()
-    if arg == "true" or arg == "false":
-        _type.ident = "bool"
-    elif is_int(arg):
-        _type.ident = "int"
-    return _type
+        
+                
+                
+                
+
+
+            
+                
+"""
+# if not get_type(): 
+#   set_type()
+def set_type_of_ident(gx, arg, arg_t_str):
+    '''
+    CREATE_MESSAGE(m_name, m_type_str):
+    1. m_type = type_from_arg(m_type_str)
+    2. m_v = python.Variable(m_name, <parent>, m_type)
+    3. infer.add_to_scope(current, m_v)
+
+    CALL(eventx, arg1, arg2):
+    1. assert eventx in global events
+    2.  for each arg: 
+            # lookup scope, hopefully updated by some other action
+            # before CALL
+            arg_type = infer.get_type_of_ident(arg1) 
+            if arg_type:
+                arv_v = python.Variable(arg, <parent>, arg_type)
+            else:
+                print("type of arg not assigned before call, strange.)
+                arg_v = python.Variable(arg, <parent>)
+            # add to scope
+            infer.add_to_scope(current, arg_v)
+
+    3. if eventx in gx.events:
+        # the python.Variable will have been created already, 
+        # referenced by event
+        # get python.function. event args refer to the python.Variable
+        # in its scope. As long as a different event block can access a
+        # previous python.function, it can access the variable in 
+        # a different event scope.
+        event = gx.events[eventx]
+        for 
+        
+                
+
+
+    '''
+
     
 def test_valid_type(gx, arg):
     # check cache
@@ -119,7 +249,6 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             final.subs[attr["__id__"]] = nested_
         else:
             # enum type
-            #print(f"{attr} likely enum")
             final.subs[attr["__type__"]] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
 
     #print(struct)
@@ -128,7 +257,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
 # call from CREATE MESSAGE, parse udfs
 # need to decode it first.
 # base_types will be a dict of type_t: {...etc...}
-def type_from_arg(gx, arg, usage_indirection=None):
+def type_from_type_str(gx, arg, usage_indirection=None):
     assert(isinstance(gx, config.GlobalInfo))
     if not arg:
         return python.Type("EOT") # end of tree
@@ -175,11 +304,7 @@ def type_from_arg(gx, arg, usage_indirection=None):
             final = reduce_to_type(gx, struct, pyramis_bases.values(), usage_indirection)# base structs will have indirection, thing empty. pain to modify struct parsing to differenciate b/w a BASE and a MEMBER
             return final
     
-    # something is wrong with my struct parser itself OR
-    # (more likely user has given an incorrect type)
-    #print(f"[{type(arg)}]")
     # likely enum
-    #print(f"{arg} not recognised, default to enum")
     return python.Type(arg, thing=utils.TH_ENUM)
 
     #error.error(f"{arg} is not a valid type for this system.")

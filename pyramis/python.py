@@ -113,13 +113,17 @@ class UserDefined:
         self.ret_type = ret_type
 
 class Variable:
-    def __init__(self, name, parent):
+    def __init__(self, arg_idx, name, parent, type=None):
+        self.arg_idx = arg_idx
         self.name = name
-        self.parent = parent # usually a python.function
+        self.parent = parent # usually a python.Action
         self.invisible = False # not in C++
         self.formal_arg = False
-        self.type = None
+        self.type = type
         # assign self.type from somewhere.
+    
+    def get_index(self):
+        return self.arg_idx
     
     def contains(self, attr):
         '''

@@ -87,6 +87,10 @@ Pyramis Invariants
 1. Single python.Variable object, "stored" in scope symtab. All other
 objects maintain references to the single instance and can update it at any time. (variables in scope tree may be untyped for certain durations)
 
+2. All variables in scope tree must be typed after first ast walk.
+
+3. Between CALL Action and python.Function(), only one must create new variables.
+
 
 - EVENTs are list of Pyramis Actions.
 - EVENT is rep via a python.Function object.

@@ -71,6 +71,7 @@ class GlobalInfo:
         self.allvars = set()
         self.type_cache = {} # built types.
         self.scope_tree = None
+        self.maps = {} # name: python.Map()
         self.timers = [] # timer classes with args. Used to create the expiry_context struct in platform.h
 
         self.cwd = self.cwd = pathlib.Path.cwd() # directory that pyramis was called from
@@ -173,7 +174,7 @@ class GlobalInfo:
                     # they have fixed child THING and decay to the
                     # same location.
                     # specific instance is assigning a THING to a generic type.
-                    ret_type = infer.type_from_arg(self, _ret_type, _ptr)
+                    ret_type = infer.type_from_type_str(self, _ret_type, _ptr)
                     #ret_type = python.Type(_ret_type, indirection=_ptr)
                     
                     udf = python.UserDefined(_func, ret_type)
@@ -195,7 +196,7 @@ class GlobalInfo:
                         if "&" in _arg_type or "&" in _a[-1]:
                             _arg_type = _arg_type.replace("&", "")
 
-                        _arg = infer.type_from_arg(self, _arg_type, _ptr)
+                        _arg = infer.type_from_type_str(self, _arg_type, _ptr)
                         udf.arg_types.append(_arg)
                     
                     # append to gx udf list
