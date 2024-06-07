@@ -43,25 +43,25 @@ def is_int(arg):
 
 # equivalent to the type cache.
 # 
-def default_var(gx, name, parent, mv=None):
-    '''
-    Transform formals of a python.Function into 
-    python.Variables, store in Function.vars
-    '''
-    if parent:
-        mv = parent.mv
+# def default_var(gx, arg_idx, name, parent, mv=None):
+#     '''
+#     Transform formals of a python.Function into 
+#     python.Variables, store in Function.vars
+#     '''
+#     if parent:
+#         mv = parent.mv
 
-    var = python.Variable(name, parent)
-    if parent:
-        parent.vars[name] = var
-    gx.allvars.add(var) # global set of variables encountered. Why not store-in-scope?
+#     var = python.Variable(name, parent)
+#     if parent:
+#         parent.vars[name] = var
+#     gx.allvars.add(var) # global set of variables encountered. Why not store-in-scope?
 
-    return var
+#     return var
 
 # mv needs to call only when appropriate
 # eg STORE. dotted attrs must also be stored as is in the scope tree.
 
-def get_variable_from_scope(gx, parent, ident):
+def get_variable_from_scope(gx, arg_idx, parent, ident):
     # search the persistent scope structure
     # upto the current event.
     # return variable (typed/untyped) if true, else None
@@ -71,11 +71,10 @@ def get_variable_from_scope(gx, parent, ident):
 # return the python.Variable if found.
 # ident must be the full dotted name
 def get_variable(gx, arg_idx, parent, ident):
-    """
     if ident == "true" or ident == "false":
         _type = python.Type("bool")
         return python.Variable(arg_idx, ident, parent, _type)
-    elif is_int(ident) or parent == SET_KEY:
+    elif is_int(ident) or parent == "SET_KEY":
         _type = python.Type("int")
         return python.Variable(arg_idx, ident, parent, _type)
     elif '"' in ident:
@@ -88,8 +87,9 @@ def get_variable(gx, arg_idx, parent, ident):
     dotted = (len(ident.split(".")) > 1)
 
     # search for exact (dotted or otherwise) name in scope.
-    var = get_variable_from_scope(gx, ident)
-    if (var)
+    var = get_variable_from_scope(gx, arg_idx, parent, ident)
+    assert(0)
+    if (var):
         return var # typed or untyped simple/dotted ident.
     else: # exact name not used yet.
         # non dotted?
@@ -105,9 +105,8 @@ def get_variable(gx, arg_idx, parent, ident):
                 return python.Variable(arg_idx,ident, parent, final_t)
             else:
                 # invalid attribute access.
-                print("Invalid attribute of {var.type.ident} was accessed.)
+                print(f"Invalid attribute of {var.type.ident} was accessed.")
                 assert(0)
-    """
 
 
 

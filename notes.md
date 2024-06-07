@@ -89,7 +89,12 @@ objects maintain references to the single instance and can update it at any time
 
 2. All variables in scope tree must be typed after first ast walk.
 
-3. Between CALL Action and python.Function(), only one must create new variables.
+3. Between CALL Action and python.Event(), only one must create new variables.
+
+4. All Python.Variables() must be stored in a class Scope, and each python.Action and python.Event contains a reference to its enclosing scope. (EVENT/IF/ELSE) and therefore the (eventually) typed variables.
+
+5. Each variable has a parent, i.e. the pyramis.Action that contains it. Further, any 
+python.variable encountered in an action must be stored in
 
 
 - EVENTs are list of Pyramis Actions.

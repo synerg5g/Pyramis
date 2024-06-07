@@ -301,11 +301,6 @@ class ContextManager:
             # event scopes as children of the globalScope.
             # any get_symbol() call will traverse enclosing_scope
             # until globalScope symtab is reached.
-            # If query symbol is a variable, return TNF.
-            # If symbol is a CALL name (i.e. param[0] of a visit_call)
-            # (assuming CALL always defined first)
-            # Traverse the event-scope list instead of returning TNF,
-            # return a reference to its event.expr i.e. PyramisEvent.
             enclosing_scope.event_scopes.append(current_scope)
 
             return current_scope

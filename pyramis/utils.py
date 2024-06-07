@@ -700,8 +700,8 @@ class Preprocessor:
 
         if event_check[0] == "EVENT":
             event_name = event_check[1]
-            print(event_name)
-            print(args)
+            # print(event_name)
+            # print(args)
             if args[-1] == ")":
                 args = args[:-1]
             return f"{tabs * ' '}def {event_name} ({args}):"
@@ -732,7 +732,7 @@ class Preprocessor:
             return f"{tabs * ' '}{action.lower()}"
 
         elif action in PYRAMIS_ACTIONS:
-            print(action)
+            #print(action)
             args_list_comma = args.split(",")
             if action == "CREATE_COLLECTION":
                 comma_formatted_args = ",".join(f"{arg.strip()}" for arg in args_list_comma)

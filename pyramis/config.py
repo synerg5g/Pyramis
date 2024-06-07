@@ -67,7 +67,7 @@ class GlobalInfo:
         self.user_base_types = None
 
         # codegen
-        self.allfuncs = set()
+        self.all_events = set()
         self.allvars = set()
         self.type_cache = {} # built types.
         self.scope_tree = None
@@ -83,6 +83,7 @@ class GlobalInfo:
         self.user_utils = None
         self.nf_dsl = self.cwd / f"{self.nf_name}.dsl" # dsl file in cwd.
         self.py_ast_path = None
+        self.output_dir = None
         self.init_directories(args)
         self.generate_builtins() # update/create asn_base_types
 

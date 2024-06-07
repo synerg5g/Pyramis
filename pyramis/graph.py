@@ -29,15 +29,13 @@ def setmv(mv):
 def getmv():
     return _mv
 
-def check_redef(gx, node, s=None):
-    existing = getmv().funcs
+def check_redef(gx, node):
+    existing_events = getmv().funcs
+    print(existing_events)
 
-    for whatsit in existing:
-        if s is not None:
-            name = s
-        else:
-            name = node.name
-        if name in whatsit:
+    for event_name in existing_events:
+        name = node.name
+        if name in event_name:
             # error.error(
             #     "function/class redefinition is not supported", gx, node, mv=getmv()
             # )
@@ -46,7 +44,7 @@ def check_redef(gx, node, s=None):
 def get_arg_nodes(node):
     '''
     Return list of ast.Constant objects that 
-    represent Pyramis args.
+    represent Pyramis Action args.
     '''
     args = []
 
@@ -118,29 +116,28 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         - append a list of functiondef nodes to the visitor's .funcnodes field.
         - create Function objects and add string args to their "formals" field.
         """
-        getmv().funcnodes = [] # ref to visitor
+        getmv().event_nodes = [] # ref to visitor
         
-        for n in self.stmt_nodes(node, ast.FunctionDef):
-            check_redef(self.gx, n)
-            getmv().funcnodes.append(n)
+        # gets every ast.node of functiondef i.e. EVENT.
+        print(self.stmt_nodes(node, ast.FunctionDef))
+        for ast_functiondef_node in self.stmt_nodes(node, ast.FunctionDef):
+            check_redef(self.gx, ast_functiondef_node)
+            getmv().event_nodes.append(ast_functiondef_node)
 
             # funcdef.name will give the actual unique name
             # of the pyramis func eg sbiincoming etc.
             # stores the args in "Function.formals" at init.
-            getmv().funcs[n.name] = python.Function(self.gx, n, mv=getmv()) # maybe add to __untyped_events[n.name] instead
+            getmv().funcs[ast_functiondef_node.name] = python.Event(self.gx, ast_functiondef_node) # maybe add to __untyped_events[n.name] instead
             #print(f"formals: {getmv().funcs[n.name].formals}")
+
+        #print(f"{getmv().funcnodes}")
     
     def visit_FunctionDef(self, node, parent=None):
-        if not parent and node.name in getmv().funcs:
+        if node.name in getmv().funcs:
             func = getmv().funcs[node.name]
         else: 
             print("unexpected")
-            func = python.Function(self.gx, node, parent, mv = getmv())
-        
-        # set default arguments, in pyramis 
-        # usually no default args
-        func.defaults = node.args.defaults
-
+            func = python.Event(self.gx, node, parent, mv = getmv())
         # go through all the pyramis function variables,
         # create a python.Variable object for each one of them.
         # parent means the containing entity.
@@ -148,12 +145,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # Add python.Variable to scope symtab as soon as it is created. (initially untyped for EVENTS)
         # EVENT and Action objects .attrs must reference the attribute in scope tree.
         # -- .attr is used for codegen.
-        # --- as soon as a scope tree variable gets typed, copy it to the 
-        # functions local .attrs.
+        # --- as soon as a scope tree variable gets typed, the func ref will also be updated
+        # --> ensure persistent scope trees.
 
-        for formal in func.formals:
-            var = infer.default_var(self.gx, formal, func)
-            var.formal_arg = True
+        for i, _v in enumerate(func.formals):
+            var = infer.get_variable(self.gx, i, func, _v)
         
         #print(func.vars)
 
@@ -165,19 +161,28 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             self.visit(body_node, func)
             
     def visit_Expr(self, node, func=None):
-        self.bool_test_add(node.value) # node.value = class ast.XXX 
-        #print(f"aiyo {type(node.value)}")
+        #self.bool_test_add(node.value) # node.value = class ast.XXX 
+        print(f"aiyo {type(node.value)}")
         self.visit(node.value, func)
 
     def visit_Call(self, node, func=None):
         '''
         '''
-        # func is of type python.Function() 
+        # func is of type python.Event() 
         # node.func is of type ast.Name, 
         # node.func.id are the pyramis action
         assert isinstance(node.func, ast.Name)
         ident = node.func.id
 
+        # Create action
+
+        # store action formals
+
+        # for i, _v in enumerate(action.formals):
+            # obtain v
+
+        
+            # laction.vars.append(var)
         if ident == 'CALL':
             # lookup_call in mv.funcs, node.args[0]
             # transfer types
@@ -189,17 +194,6 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
         for arg in get_arg_nodes(node):
             self.visit(arg, func) # func = ast.Call
-
-    def visit_Name(self, node, func=None):
-        # if node.id = "CALL":
-        # lookup_call in mv.funcs
-        # if the node.id. is defined before as a functiondef, 
-        pass
-    
-    def visit_Constant(self, node, func=None):
-        map = { } # should contain a set of Pyramis types, accessible by a call to get_type(name). 
-        #print(f"Arg: {node.value}\nType: {type(node.value)}")
-        self.log.debug(f"Arg: {node.value}\tType: {type(node.value)}") # all str, maybe some int
         
     def visit_For(self, node, func=None):
         self.log.debug(f"In FOR") # all str, maybe some int
@@ -218,7 +212,7 @@ def parse_module(gx, node=None):
 
     filename = gx.py_module_path
 
-    module = python.Module(filename, node)
+    module = python.Module(gx, filename, node)
 
     if module.name in gx.modules:  # cached?
         return gx.modules[module.name]
@@ -244,4 +238,4 @@ def parse_module(gx, node=None):
     mv = old_mv
     setmv(mv)
 
-    return module
+    return module # contains state necessary for codegen.

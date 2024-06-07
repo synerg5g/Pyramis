@@ -120,13 +120,37 @@ class Pyramis:
 
         if args.subcmd == 'translate':
             translator.do_analyze()    # ast entry point
-            translator.raw_translate()  # C++ code-generation
+            translator.do_raw_translate()  # C++ code-generation
         
         if args.subcmd == "build":
-            translator.do_analyze()
-            translator.do_raw_translate()
-            # create platform file and makefile.
-            translator.do_build()
+            if translator.gx.raw_dir.is_dir():
+                # assert three files present
+                _required = [f"{translator.gx.nf_name}_linking.cpp", 
+                             f"{translator.gx.nf_name}_linking.h",
+                             f"{translator.gx.nf_name}_contexts.h"]
+                _missing = []
+                for file_name in _required:
+                    if not translator.gx.raw_dir.joinpath(file_name).is_file():
+                        _missing.append(file_name)
+
+                if _missing:
+                    raise AssertionError(f"Missing required files in {translator.gx.raw_dir}: {', '.join(_missing)}")
+
+                # copy into self.gx.build_dir
+                for file in _required:
+                    _in = translator.gx.raw_dir / file
+                    _out = translator.gx.build_dir / file
+
+                    with open(_in, "r") as f_in, open(_out, "w") as f_out:
+                        data = f_in.read()
+                        f_out.write(data)
+            else:
+                # repeat pyramis translate procedure.
+                translator.do_analyze()
+                translator.do_raw_translate()
+
+                # create platform file and makefile.
+                translator.do_build()
     
     
     def do_analyze(self):
@@ -137,9 +161,20 @@ class Pyramis:
     
     def do_raw_translate(self):
         self.log.debug("TODO: translate()")
-        exit()
+
+        # linking.h
+        self.gx.py_module.generate_linking_h()
+
+        # linking.cpp
+        self.gx.py_module.generate_linking_cpp()
+
+        # contexts
+        self.gx.py_module.generate_contexts()
 
     def do_build(self):
+        # create platform file
+
+        # create makefile
         pass
 
     def pyramis2py(self):

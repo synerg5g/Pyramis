@@ -11,35 +11,7 @@ import sys
 import pathlib
 from . import error
 from . import utils
-
-class PyObject:
-    """Mixin for py objects"""
-
-    def __repr__(self):
-        return f"{self.__class__.__name__} {self.ident}"
-    
-class Module(PyObject):
-    """python module class
-
-    name: str               module name
-    name_list: [str]        list of names
-    ident: str              module name
-
-    filename: Path          module path
-    path: Path              module parentdir
-    relative_filename: Path module relative_filenmae
-    relative_path: Path     relative_filename parentdir
-
-    ast: ast.Module         ast module or None
-    node: ast.node          ast Node
-    """
-    def __init__(self, filename, node):
-        self.filename = pathlib.Path(filename) # full path of the module i.e node.py
-        self.name = self.filename.name
-        self.path = self.filename.parent
-
-        self.ast = None  # to be provided later after analysis
-        self.node = node
+import collections
 
 # def find_module(gx, name, basepath):
 #     # return full filepath
@@ -89,22 +61,146 @@ def extract_argnames(arg_struct):
 
     return argnames
 
-class Function:
-    def __init__(self, gx, node=None, parent=None, mv=None):
+
+
+class PyObject:
+    """Mixin for py objects"""
+
+    def __repr__(self):
+        return f"{self.__class__.__name__} {self.ident}"
+    
+class Module(PyObject):
+    """python module class
+
+    name: str               module name
+    name_list: [str]        list of names
+    ident: str              module name
+
+    filename: Path          module path
+    path: Path              module parentdir
+    relative_filename: Path module relative_filenmae
+    relative_path: Path     relative_filename parentdir
+
+    ast: ast.Module         ast module or None
+    node: ast.node          ast Node
+    """
+    def __init__(self, gx, filename, node):
         self.gx = gx
-        self.node = node # own ast node
-        if node:
-            ident = node.name
-            self.ident = ident
-            self.formals = extract_argnames(node.args) # store the func args given by pyramis file.
+        self.filename = pathlib.Path(filename) # full path of the module i.e node.py
+        self.name = self.filename.name
+        self.path = self.filename.parent
 
-        self.parent = parent # ***
-        self.vars = {} # ***
-        self.mv = mv # ***
-        self.defaults = []
+        self.ast = None  # to be provided later after analysis
+        self.node = node 
+
+        self.events = collections.OrderedDict() # store events by line-no.
+        self.maps = {} # used to generate contexts.h
+
+        self.generated = [] # store converted text from events.
+
+    def generate_linking_h(self):
+        '''
+        Contains:
+        - linking.cpp event declarations
+        - default timer event declarations, in case timers are used
+        - include udf.h, platform.h
+        - externed map declarations and map mutex locks.
+        - header guards
+        Store lines in self.generated.
+        Create the new <NF>_linking.h file in gx.output_dir
+        '''
+        # do stuff
+
+        file = self.gx.output_dir / f"{self.gx.nf_name}_linking.h"
+        self.write_to_file(file)
+
+    def generate_linking_cpp(self):
+        '''
+        Contains:
+        - include linking_h
+        - unrolled python.event()s
+        Store lines in self.generated.
+        Create the new <NF>_linking.cpp file in gx.output_dir
+        '''
+        for event in self.events:
+            event.emit()
+            self.generated.append(event.generated)
+        
+        file = self.gx.output_dir / f"{self.gx.nf_name}_linking.cpp"
+        self.write_to_file(file)
+        
+    def generate_contexts(self):
+        '''
+        Contains:
+        - User level map definitions and map struct definitions.
+        i.e. pyramis context.
+        - default system includes
+        - header guards
+        '''
+        # do stuff
+
+
+        file = self.gx.output_dir / f"{self.gx.nf_name}_contexts.h"
+        self.write_to_file(file)
+
+    def write_to_file(self, filepath):
+        '''Called by the generate_* methods at end.'''
+        # do stuff
+
+
+        # reset module.generated
+        self.generated = []
+
+class Event:
+    def __init__(self, gx, node=None, parent=None):
+        self.gx = gx
+        self.ast_node = node # own ast node
+        if node:
+            name = node.name
+            self.name = name
+            self.formals = extract_argnames(node.args) # list of arg strs.
+
+        self.vars = []
+        self.actions = [] # 
 
         if node:
-            self.gx.allfuncs.add(self) # gx stores a history of refs to funcs called allfuncs
+            self.gx.all_events.add(self) # gx stores a history of refs to events called all_events
+
+        self.generated = [] # emit appends string lines.
+
+
+    def emit(self):
+        # update self.generated.
+        for action in self.actions:
+            action.emit()
+
+
+class Action:
+    pyramis_actions = utils.PYRAMIS_ACTIONS
+
+    def __init__(self, gx, name, parent=None, mv=None):
+        self.gx = gx
+        self.name = name
+        self.parent = parent
+        self.mv = mv
+        self.vars = {} # references to python.Var(), stored in the enclosing scope.
+        self.generated = ""
+
+    def emit(self):
+        '''
+        C++ code generation, unique per action.
+        '''
+        emitters = {
+            action: getattr(self, f"emit_{action.lower()}") for action in Action.pyramis_actions
+        }
+        
+        if self.name in emitters:
+            return emitters[self.name]
+        else:
+            error.error(f"Action {self.name} not supported yet.")
+
+    def emit_assert(self):
+        pass
 
 class UserDefined:
     def __init__(self, name, ret_type):
@@ -199,31 +295,6 @@ class Type:
         for s, st in self.subs.items():
             _str += f"\t{s}: {str(st)}"
         return _str
-    
-class Action:
-    pyramis_actions = utils.PYRAMIS_ACTIONS
-
-    def __init__(self, gx, name, parent=None, mv=None):
-        self.gx = gx
-        self.name = name
-        self.parent = parent
-        self.mv = mv
-
-    def emit(self):
-        '''
-        C++ code generation, unique per action.
-        '''
-        emitters = {
-            action: getattr(self, f"emit_{action.lower()}") for action in Action.pyramis_actions
-        }
-        
-        if self.name in emitters:
-            return emitters[self.name]
-        else:
-            error.error(f"Action {self.name} not supported yet.")
-
-    def emit_assert(self):
-        pass
 
 # primitive C++ types
 # only these will have subs empty
@@ -244,7 +315,7 @@ t2.subs["alg"] = str_t
 # print(t1.contains("shdr"))
 # print(t1.get_typeof("shdr").ident)
 
-var = Variable("myvar", None)
+var = Variable("myvar", None, None)
 var.type = t1
 # print(var.contains("shdr"))
 
