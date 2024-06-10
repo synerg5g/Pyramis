@@ -3,6 +3,66 @@ from . import config
 from . import error
 from . import utils
 
+class Scope:
+    '''
+    
+    '''
+    MODULE = "Module"
+    EVENT = "Event"
+    BLOCK = "BLOCK"
+
+    def __init__(self, kind, encloser=None):
+        self.kind = kind  # MODULE, EVENT
+        self.encloser = encloser
+        self.symtab = {}  # name: python.Variable
+        self.id = id(self)
+
+def enter_new_scope(mv, scope_kind):
+    '''
+    Create a new scope object, Update the live-scope maintained in gx,
+    set parent of new scope = current scope, return ref to new scope
+    '''
+    if scope_kind == Scope.MODULE:
+        # Entering a new module, i.e. set root scope
+        mv.root_scope = Scope(Scope.MODULE) # must never change
+        mv.live_scope = mv.root_scope
+        return mv.live_scope
+    
+    elif scope_kind == Scope.EVENT:
+        # Entering a new event.
+        assert(mv.live_scope.kind == Scope.MODULE) # scope exits must be done correctly for If
+        new_scope = Scope(Scope.EVENT)
+        new_scope.encloser = mv.live_scope
+        mv.live_scope = new_scope
+        return mv.live_scope
+    
+    elif scope_kind == Scope.BLOCK:
+        # Enter new BLOCK scope
+        assert(mv.live_scope.kind == Scope.EVENT or mv.live_scope.kind == Scope.BLOCK)
+        new_scope = Scope(Scope.BLOCK)
+        new_scope.encloser = mv.live_scope
+        mv.live_scope = new_scope
+        return mv.live_scope
+    else:
+        error.error("Not a valid Scope kind", warning=True)
+    
+    print(f"Created new live scope of kind {mv.live_scope.kind}")
+
+def exit_live_scope(mv):
+    '''
+    Set the gx live-scope to the parent of the current live scope.
+    Should call at the end of every node visit.
+    '''
+    mv.live_scope = mv.live_scope.encloser
+    print(f"Exiting scope, new live scope: {mv.live_scope.kind}")
+
+def add_var_to_live_scope(mv, var):
+    if var.name not in mv.live_scope.symtab:
+        mv.live_scope.symtab[var.name] = var
+    else:
+        # overwrite type?
+        print(f"WARNING: `{var.name}` already exists in the current scope.")
+
 C_TYPES = [
     "char",
     "signed char",
@@ -61,140 +121,69 @@ def is_int(arg):
 # mv needs to call only when appropriate
 # eg STORE. dotted attrs must also be stored as is in the scope tree.
 
-def get_variable_from_scope(gx, arg_idx, parent, ident):
+def get_variable_from_scope(mv, arg_idx, parent, ident):
     # search the persistent scope structure
     # upto the current event.
     # return variable (typed/untyped) if true, else None
-    pass
+    curr_scope = mv.live_scope
+    while(curr_scope.kind != Scope.MODULE):
+        if (ident in curr_scope.symtab):
+            return curr_scope.symtab[ident]
+        else:
+            # climb parent
+            curr_scope = curr_scope.encloser
+    return None
 
 # search for an arg in the local scope tree
 # return the python.Variable if found.
 # ident must be the full dotted name
-def get_variable(gx, arg_idx, parent, ident):
+# parent is the python.Action() that contains this variable
+# create the python.Action before get_variable.
+def get_variable(mv, arg_idx, ident, parent):
+    print(parent)
+    assert(isinstance(parent, python.Action) or isinstance(parent, python.Event))
     if ident == "true" or ident == "false":
         _type = python.Type("bool")
         return python.Variable(arg_idx, ident, parent, _type)
-    elif is_int(ident) or parent == "SET_KEY":
+    elif is_int(ident) or parent.name == "SET_KEY" or parent.name == "GET_KEY":
         _type = python.Type("int")
         return python.Variable(arg_idx, ident, parent, _type)
     elif '"' in ident:
         _type = python.Type("string")
         return python.Variable(arg_idx, ident, parent, _type)
-
+        
     # store the stem i.e. terminal attribute and root i.e base ident
     stem = ident.split(".")[-1]
     root = ident.split(".")[0]
     dotted = (len(ident.split(".")) > 1)
+    print(ident)
+    print(f"Dotted: {dotted}")
 
     # search for exact (dotted or otherwise) name in scope.
-    var = get_variable_from_scope(gx, arg_idx, parent, ident)
-    assert(0)
+    var = get_variable_from_scope(mv, arg_idx, parent, ident)
     if (var):
         return var # typed or untyped simple/dotted ident.
     else: # exact name not used yet.
-        # non dotted?
         if not dotted:
-            # this is the first ever encounter - i.e. no python.Var() has ever been created
-            return None 
+            # this is the first ever encounter - i.e. 
+            # no python.Var() has ever been created in THIS scope.
+            # return untyped variable
+            return python.Variable(arg_idx, ident, parent)
         else:
             # if dotted not found, search for type of root
-            var = get_variable_from_scope(gx, root)
-            # if root of dotted found in scope
-            if (var.type):
+            var = get_variable_from_scope(mv, arg_idx, parent, root)
+            if not var:
+                # accessing attributes of an unitialised variable.
+                error.error("`%s`: Attempt to access unitialised variable `%s`"%(parent.name, root))
+            elif (var.type):
                 final_t = var.type.get_typeof(stem)
-                return python.Variable(arg_idx,ident, parent, final_t)
+                print(final_t)
+                return python.Variable(arg_idx, ident, parent, final_t)
             else:
                 # invalid attribute access.
-                print(f"Invalid attribute of {var.type.ident} was accessed.")
-                assert(0)
-
-
-
-    # return variable.
-
-    pass
-
-"""
-In every visit_call():
-    - create the python.Action
-    - store all args_strs in a list.
-
-set_typed = []
-set_untyped = []
-common pattern:
-for i, _v in enumerate(args):
-    # if used before, returns python.Variable.
-    # if not, need to create a new python.Variable for this ident
-    var = get_variable(i, _v, <parent>) # typed/untyped
-    if (not var):
-        # rare
-        var = python.Variable(i, _var, <parent>)
-    
-    # we have a variable, could be typed or untyped depending on actions before
-    # the current one.
-    # SET(a, b)
-    # If type(a) known and type(b) known:
-    # - assert t(a) == t(b), error on mismatch
-    # 
-    # If type(a) known and type(b) not known:
-    # - would be strange, trying to set an ident to a pyramis-invalid value
-    #
-    # If type(a) unkown:
-    # - type(b) must be known and type(a) must be set, strange otherwise.
-    # [If either type is known, update the other. If both are known, check
-    # type consistency. If neither are known, (eg SET(userid, procedurekey)), 
-    # store the untyped variable in the scope.
-    if parent.action == SET:
-        if (var.type):
-            set_typed.append(var)
-            if len(set_untyped) == 1:  
-                # 0 untyped 1 typed
-                # var is 1
-                set_untyped[0].type = var.type
-
-        if len(set_types) == 2:
-            assert(typed[0].type.equals(typed[1].type))     
+                error.error(f"Invalid sub-attribute of {var.name}  was accessed.")
+                return None
         
-            
-    # if var untyped, either used before or this is first occurence.
-    if not var.type:
-        # should be able to get a concrete
-        # type from somewhere
-        switch (parent.action):
-            case UDF:
-                name = args[1] # whatever the index is
-                udf = gx.udfs[name]
-
-                # udfs are always typed
-                _type = copy.deepcopy(udf.args[var.get_index()].type)
-                var.type = _type
-
-                # add new type to scope
-                # if a udf type has indirection 1, it just means
-                # that the var.. this is an issue for codegen.
-            case SET:
-                set_untyped.append(var)
-                if set_typed == 1:
-                    # 0 typed 1 untyped
-                    var.type = set_typed[0].type
-
-                if len(set_untyped) == 2:
-                    # both unknown, type assign not 
-                    # possible at this stage
-                    pass
-    # scope, set_typed and untyped contain refs to same obj
-    # hence the set modifications will apply to the scope tree itself.         
-    infer.add_to_scope(current, var) 
-                
-        
-                
-                
-                
-
-
-            
-                
-"""
 # if not get_type(): 
 #   set_type()
 def set_type_of_ident(gx, arg, arg_t_str):

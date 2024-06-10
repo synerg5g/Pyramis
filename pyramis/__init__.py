@@ -42,7 +42,7 @@ class Pyramis:
         self.log.addHandler(log_console)
 
         # set the default log level
-        self.log.setLevel(logging.INFO)
+        self.log.setLevel(logging.DEBUG)
 
     
     def configure(self, args, magic):

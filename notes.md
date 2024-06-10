@@ -73,6 +73,13 @@ the ast node, (in this case the ast.Constant representing a ast.Call argument i.
 - If possible, provide the supported asn_base_types along with the pyramis package itself! (lke python). <see readme.md#functionality>
 - Provide the ASN parser source, so people can extend the basetypes set.
 
+- Nested scopes allow the existence of multiple definitions of the same variable name, by enforcing scope-locality of those variables.
+Q. Should this be allowed? 
+-> If inner scope types a variable (by explicit create_message or udf) with same name as one in any enclosing scope, variable redefinition, modify the old variable object.
+-> else, do nothing
+Default actions: If same name used in current scope, new usage will modify the type of the same variable object.
+--- Different scopes may contain variables with same names, but they must all refer to the same object, created in a different scope.
+
 2. Typing Invariants:
 ======================
 - All event i.e. python.Function() formals have python type "str" at init.
@@ -94,7 +101,30 @@ objects maintain references to the single instance and can update it at any time
 4. All Python.Variables() must be stored in a class Scope, and each python.Action and python.Event contains a reference to its enclosing scope. (EVENT/IF/ELSE) and therefore the (eventually) typed variables.
 
 5. Each variable has a parent, i.e. the pyramis.Action that contains it. Further, any 
-python.variable encountered in an action must be stored in
+python.variable encountered in an action must be stored in the appropriate scope.
+
+6. CALL action variables must always be typed in visit_Call(). 
+On visit_Functiondef, if the variable untyped after get_variable -> CALL occurs in a different event
+On visit_Functiondef, if variable typed after get_variable -> CALL occurred before, was recorded. (by the search-in-calls pathway.)
+On visit_Call, if action == CALL, if variable untyped after get_variable -> ??
+--> Need to link the variables of events to variables of calls somehow
+EVENT entry(a, b, c):
+    CALL (eventname, a, b) # stored in mv.calls as a python.Action(), formals [] = a,b
+
+EVENT eventname(j, k): 
+- get_variable() should search for python.action in calls, return ref variable with same idx.
+- In the current event scope symtab, store j: <var from call>, k:<var from call>
+subsequent non-CALL access to j,k in the current event should assign a type to j,k -> i.e. 
+curr_scope.symtab[j].type = type --> old_scope.symtab[a].type = type
+
+    # Use j, k in a type-assignment action
+    - Giving j, k a type should automatically give a, b in the different event scope a
+    type.
+    
+
+
+On visit_Call, if action == CALL, if variable typed after get_variable -> assertion, always true.
+
 
 
 - EVENTs are list of Pyramis Actions.

@@ -9,8 +9,8 @@ import os
 import re
 import sys
 import pathlib
-from . import error
-from . import utils
+# from . import error
+# from . import utils
 import collections
 
 # def find_module(gx, name, basepath):
@@ -170,32 +170,32 @@ class Event:
         for action in self.actions:
             action.emit()
 
-class Action:
-    pyramis_actions = utils.PYRAMIS_ACTIONS
+# class Action:
+#     pyramis_actions = utils.PYRAMIS_ACTIONS
 
-    def __init__(self, gx, name, parent=None, mv=None):
-        self.gx = gx
-        self.name = name
-        self.parent = parent
-        self.mv = mv
-        self.vars = [] # references to python.Var(), stored in the enclosing scope.
-        self.generated = ""
+#     def __init__(self, gx, name, parent=None, mv=None):
+#         self.gx = gx
+#         self.name = name
+#         self.parent = parent
+#         self.mv = mv
+#         self.vars = [] # references to python.Var(), stored in the enclosing scope.
+#         self.generated = ""
 
-    def emit(self):
-        '''
-        C++ code generation, unique per action.
-        '''
-        emitters = {
-            action: getattr(self, f"emit_{action.lower()}") for action in Action.pyramis_actions
-        }
+#     def emit(self):
+#         '''
+#         C++ code generation, unique per action.
+#         '''
+#         emitters = {
+#             action: getattr(self, f"emit_{action.lower()}") for action in Action.pyramis_actions
+#         }
         
-        if self.name in emitters:
-            return emitters[self.name]
-        else:
-            error.error(f"Action {self.name} not supported yet.")
+#         if self.name in emitters:
+#             return emitters[self.name]
+#         else:
+#             error.error(f"Action {self.name} not supported yet.")
 
-    def emit_assert(self):
-        pass
+#     def emit_assert(self):
+#         pass
 
 class UserDefined:
     def __init__(self, name, ret_type):
@@ -221,7 +221,7 @@ class Variable:
         "Does this variable contain a particular sub-attribute"
         '''
         _type = self.type
-        return _type.contains(attr)    
+        return _type._contains(attr)    
 
     def __repr__(self):
         if self.parent:
@@ -231,8 +231,7 @@ class Variable:
 class Map:
     def __init__(self, map_name):
         self.name = map_name
-        self.key_type = None
-        self.struct = utils.Struct(name=f"{map_name}_struct", thing=utils.TH_SIMPLE) # one per map
+        self.struct = utils.Struct(name=f"{map_name}_struct") # one per map
     
     def add_to_map_struct(self, variable):
         # add_to_map only after type_lookup
@@ -291,7 +290,7 @@ class Type:
                 path.append(attr_id)
                 path.extend(sub_path)
                 return path
-        return []  
+        return []
     
     def get_typeof(self, attr):
         '''
@@ -312,30 +311,34 @@ class Type:
 def main():
     # primitive C++ types
     # only these will have subs empty
-    int_t = Type("int", utils.TH_ARRAY)
-    float_t = Type("float")
+    int_t = Type("int")
+    float_t = Type("float", "ARRAY")
     str_t = Type("str")
+
+    myvar = "dick"
 
     # this type creation should be simulated by the 
     # asn parser.
     t1 = Type("nas_t")
     t1.subs["sst"] = int_t
-    t1.subs["ssd"] = float_t
+    t1.subs["ssd"] = int_t
     t2 = Type("secuheader_t") # type of an attribute of t1
     t1.subs["shdr"] = t2
     t2.subs["cipher"] = float_t
     t2.subs["alg"] = str_t
+    path = t1.path_to("ARRAY")
 
     # print(t1.contains("shdr"))
     # print(t1.get_typeof("shdr").ident)
 
     var = Variable("myvar", None, None)
     var.type = t1
-    # print(var.contains("shdr"))
-    path = t1.path_to(utils.TH_ARRAY)
+    print(var.contains("shdr"))
     print(path)
-    # print(t1)
-    #print(t2)
+    myvar = ".".join(path)
+    print(myvar)
+    print(t1)
+    print(t2)
 
 if __name__ == "__main__":
     main()

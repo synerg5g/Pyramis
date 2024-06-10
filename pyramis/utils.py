@@ -53,6 +53,7 @@ def do_struct(mini):
         m_nested_enum = re.match(R_NESTED_ENUM, line)
         m_typedef_enum = re.match(R_TYPEDEF_ENUM, line)
         m_typedef = re.match(R_TYPEDEF, line)
+        m_asn_sequence = re.match(R_ASN_SEQUENCE, line)
         if "=" in line or "return" in line:
             continue
         if (m_struct):
@@ -120,11 +121,15 @@ def do_struct(mini):
                     attr_type = "int" # default to int
                 else:
                     #print(f"...Inside parent, adding attrs to {stack[-1].thing}")
-                    attr_id = line.split()[-1]
-                    attr_type = ' '.join(line.split()[:-1])
+                    
+                    if m_asn_sequence:
+                        attr_type = m_asn_sequence.group(1) 
+                        attr_id = line.split()[-1] + "@@"
+                    else:
+                        attr_type = ' '.join(line.split()[:-1])
+                        attr_id = line.split()[-1]
                     #print(attr_type)
                 attr = Attribute(attr_id, attr_type)
-                #print(attr)
 
                 # add attribute to curr struct
                 # non-structs will exit with None
@@ -249,6 +254,7 @@ R_STRUCT_COMPOUND_ATTRIBUTE = r'struct\s+\S+\s+\S+;' # struct str1 str2;
 R_STRUCT_SIMPLE_ATTRIBUTE = r'(?!(?:enum\s+))\S+\s*\S+\s*;'
 R_STRUCT_END = r'(\})?\s*([^;]+;)'
 R_STRUCT_ARRAY_SIZE = r'\[?[^\[\]]*\]'
+R_ASN_SEQUENCE = r'A_SEQUENCE_OF\((.*)\)\s*.*;'
 
 # typedef <arbitrary number of whitespace-sep. strings> string0
 # g1: old_type g3: new_type.
@@ -357,18 +363,20 @@ class FileParser:
             m_nested = re.match(R_STRUCT_OR_TYPEDEF_STRUCT, line)
             m_union = re.match(R_TYPEDEF_UNION, line)
             m_typedef = re.match(R_TYPEDEF, line)
+            m_asn_sequence = re.match(R_ASN_SEQUENCE, line)
             if (
                 m_simple_attr or 
                 m_compound_attr or 
+                m_asn_sequence or
                 m_nested or 
                 m_union or 
                 m_struct_end or
                 m_typedef
                 ):
                 spurious = False
-                if ")" in line:
+                if ")" in line and not m_asn_sequence:
                     continue
-                if ((m_simple_attr or m_compound_attr) and brackets == 0 and not m_struct_end):
+                if ((m_simple_attr or m_compound_attr or m_asn_sequence) and brackets == 0 and not m_struct_end):
                     continue
                 # if (m_typedef and (brackets == 0)):
                 #     # associate a python.Type right here?
@@ -547,6 +555,9 @@ class Attribute:
         self.ptr_indirection = self.id.count("*") + self.type_str.count("*")
         if ("[") in self.id:
             self.thing = TH_ARRAY
+        if ("@@") in self.id:
+            self.id = self.id.replace("@", "")
+            self.thing = TH_ARRAY
 
         self.id = self.id.strip("*")
         self.id = self.id.split(":")[0] if ":" in self.id else self.id.split("[")[0]
@@ -563,6 +574,7 @@ class Struct:
         self.name = name # typedef struct <tag_name> {} <alias_name>
         self.tag_name = name
         self.attributes = {} # attr_type_str: attr
+        
         self.vars = {} # for map struct only.
 
     def __str__(self):

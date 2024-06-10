@@ -5,6 +5,7 @@ import re
 from . import python
 from . import utils
 from . import infer
+from . import error
 
 UDF_REGEX = r'(?P<return_type>\S+\s*) ([\w_]+)\(([^,]+(?:,\s*[^,]+)*)?\)' # chatgpt
 
@@ -63,17 +64,19 @@ class GlobalInfo:
         self.user_message_types_path = self._pyramis / "_user_message_types.json"
         self.udfs_path = None
         self.udfs = {}
+        self.encoders = {}
+        self.decoders = {}
         self.pyramis_base_types = None
         self.user_base_types = None
 
         # codegen
         self.all_events = set()
         self.allvars = set()
-        self.type_cache = {} # built types.
-        self.scope_tree = None
         self.maps = {} # name: python.Map()
         self.timers = [] # timer classes with args. Used to create the expiry_context struct in platform.h
 
+        self.type_cache = {} # built Python.types
+        
         self.cwd = self.cwd = pathlib.Path.cwd() # directory that pyramis was called from
         self.raw_dir = self.cwd / "__TRANSLATE_RAW__" / self.nf_name
         self.build_dir = self.cwd/ "__BUILD__" / self.nf_name
@@ -92,6 +95,34 @@ class GlobalInfo:
 
 
         self.modules = {} # cache of py modules handled just in case
+
+    def get_decoder(self, decoder_name):
+        for encoder in self.encoders.values():
+            if encoder.name == decoder_name:
+                error.error("Encoder `%s` specified in action DECODE: Check .dsl"%encoder.name)
+        
+        for decoder in self.decoders.values():
+            assert(isinstance(decoder, python.UserDefined))
+            if decoder.name == decoder_name:
+                return decoder
+        error.error("Invalid decoder `%s`: Check udf.h"%decoder_name)
+
+    def get_encoder(self, encoder_name):
+        for decoder in self.decoders.values():
+            if decoder.name == encoder_name:
+                error.error("Decoder `%s` specified in action ENCODE: Check .dsl."%decoder.name)
+        
+        for encoder in self.encoders.values():
+            if encoder.name == encoder_name:
+                return encoder
+        error.error("Invalid Encoder `%s`: Check udf.h"%encoder_name)
+
+    def get_udf(self, udf_name):
+        if udf_name in self.udfs:
+            return self.udfs[udf_name]
+        else:
+            error.error("Invalid UDF: `%s`. Check udf.h."%udf_name)
+        
     
     def init_directories(self, args):
         if args.subcmd == "translate":
@@ -146,11 +177,21 @@ class GlobalInfo:
             sys.exit(1)
 
         self.udfs_path = _in
-
+        encoder = False
+        decoder = False
+        for_type = None
         with open(self.udfs_path, "r") as f_in:
             for _, line in enumerate(f_in, start=1):
                 # skip comments
-                if line.startswith("/") or line.isspace():
+                if line.startswith("//@@encoder"):
+                    encoder=True
+                    for_type = line.split(":")[-1].strip()
+                    continue
+                elif line.startswith("//@@decoder"):
+                    decoder = True
+                    for_type = line.split(":")[-1].strip()
+                    continue
+                if line.isspace():
                     continue
                 # * <*>(*)
                 if re.match(UDF_REGEX, line): # XXX Ugly :)
@@ -203,9 +244,17 @@ class GlobalInfo:
                     # append to gx udf list
                     if udf.name in self.udfs:
                         udf.name = f"__{udf.name}"
-                    self.udfs[udf.name]  = udf
+                    if encoder:
+                        self.encoders[for_type] = udf
+                        encoder = False
+                    if decoder:
+                        self.decoders[for_type] = udf
+                        decoder = False
+                    self.udfs[udf.name] = udf
+
         print(f"Parsed {len(self.udfs)} udfs.")
-        #print(self.udfs)
+        print(f"Encoders: {self.encoders}")
+        print(f"Decoders: {self.decoders}")
 
 
     def generate_builtins(self):
