@@ -151,6 +151,9 @@ def get_variable(mv, arg_idx, ident, parent):
     elif '"' in ident:
         _type = python.Type("string")
         return python.Variable(arg_idx, ident, parent, _type)
+    elif ".size()" in ident:
+        _type = python.Type("size_t")
+        return python.Variable(arg_idx, ident, parent, _type)
         
     # store the stem i.e. terminal attribute and root i.e base ident
     stem = ident.split(".")[-1]
@@ -171,13 +174,15 @@ def get_variable(mv, arg_idx, ident, parent):
             return python.Variable(arg_idx, ident, parent)
         else:
             # if dotted not found, search for type of root
+            print(f"Getting variable of root {root}")
             var = get_variable_from_scope(mv, arg_idx, parent, root)
             if not var:
                 # accessing attributes of an unitialised variable.
                 error.error("`%s`: Attempt to access unitialised variable `%s`"%(parent.name, root))
             elif (var.type):
+                print(f"Type of root {root} is {var.type}")
                 final_t = var.type.get_typeof(stem)
-                print(final_t)
+                print(f"Type of stem {stem} is {final_t}")
                 return python.Variable(arg_idx, ident, parent, final_t)
             else:
                 # invalid attribute access.
@@ -236,16 +241,13 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
         print(type(base_types))
         # handle list with same type name.
     assert(isinstance(base_types, dict))
-    
     if usage_indirection:
         final = python.Type(struct["__name__"], usage_indirection)  
     else:
-        if struct["__name__"] in gx.type_cache:
-            return gx.type_cache[struct["__name__"]]
         final = python.Type(struct["__name__"])  
 
-    attributes = struct["__attributes__"]
-    for attr in attributes.values():
+    attributes = struct["__attributes__"] # dict of dict
+    for attr_name, attr in attributes.items(): # attr is a dict
         if attr["__type__"] in C_TYPES:
             # in a ident a.b.c.d, looking for type_of(c) should return name of Python.Type() only (excluding subs)
             # eg: if c in t.subs, return t.sibs[c].type_str
@@ -263,7 +265,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             final.subs[attr["__id__"]] = nested_
         else:
             # enum type
-            final.subs[attr["__type__"]] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
+            final.subs[attr_name] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
 
     #print(struct)
     return final

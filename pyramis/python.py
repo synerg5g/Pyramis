@@ -249,7 +249,7 @@ class Timer:
         self._callback = _callback
 
 class Type:
-    def __init__(self, ident, thing=None, indirection=None):
+    def __init__(self, ident, thing=utils.TH_SIMPLE, indirection=None):
         self.ident = ident # typename
         self.subs = {} # attr:Type
         self.thing = thing  
@@ -260,22 +260,10 @@ class Type:
         if self.ident == other_type.ident:
             return True
         # have some equivalent type rules
-        
-    def _contains(self, attr):
-        '''
-        Returns True if a given nested asn type
-        has a particular string as an attribute,
-        at any nesting level, else False.
-        '''
-        if attr in self.subs:
-            return True, self.subs[attr]
-        
-        for sub in self.subs:
-            res, type = self.subs[sub]._contains(attr)
-            if res:
-                return res, type
-        return False, None
-    
+        elif ((self.ident == "int" or self.ident == "uint8_t" or self.ident == "size_t") and
+            (other_type.ident == "int" or other_type.ident == "uint8_t" or other_type.ident == "size_t")):
+            return True
+
     def path_to(self, thing):
         '''
         If a sub attribute is of type with thing thing, return the
@@ -291,7 +279,22 @@ class Type:
                 path.append(attr_id)
                 path.extend(sub_path)
                 return path
-        return []  
+        return [] 
+    
+    def _contains(self, attr):
+        '''
+        Returns True if a given nested asn type
+        has a particular string as an attribute,
+        at any nesting level, else False.
+        '''
+        if attr in self.subs:
+            return True, self.subs[attr]
+        
+        for sub in self.subs:
+            res, type = self.subs[sub]._contains(attr)
+            if res:
+                return res, type
+        return False, None 
     
     def get_typeof(self, attr):
         '''

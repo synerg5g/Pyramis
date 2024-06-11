@@ -135,17 +135,25 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             self.visit(child, None)
         self.log.debug("Module AST walk complete.")
 
-        # for event in self.events.values():
-        #     for action in event.actions:
-        #         if isinstance(action, str):
-        #             print(action)
-        #             continue
-        #         for var in action.vars:
-        #             if isinstance(var, python.Variable) and (not var.type):
-        #                 print(f'UNTYPED: `{var.name}`: {var.type}')
-        #         for var in action.vars:
-        #             if isinstance(var, python.Variable) and (var.type):
-        #                 print(f'TYPED: `{var.name}`: {var.type}')
+        # self.validate_walk()
+        for event in self.events.values():
+            for action in event.actions:
+                if isinstance(action, python.Action):
+                    print(f"Action: {action.name}")
+                else:
+                    print(f"Non-action in event.actions: {event} :: {action}")
+                    print(type(action))
+                for var in action.vars:
+                    if isinstance(var, python.Variable):
+                        print(f'`{var.name}`: {var.type}')
+                    else:
+                        print(f"Non-var in action.vars: {action} -> {var}")
+                        print(type(var))
+        
+        # check if map structs are complete.
+        for map in self.gx.maps.values():
+            print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
+        print(self.live_scope.kind)
                 
 
         # can begin a second ast walk from here,
@@ -299,6 +307,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 untyped = []
                 typed = []
                 for i, _v in enumerate(args):
+                    print(f"Getting variable for {_v.value}")
                     var = infer.get_variable(self, i, _v.value, action)
 
                     if not var:
@@ -319,7 +328,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
                         if len(untyped) == 2:
                             # assigning unknown to unknown
-                            pass
+                            print([v.name for v in untyped])
                         
                     action.vars.append(var)
                     infer.add_var_to_live_scope(self, var)
@@ -500,6 +509,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 infer.add_var_to_live_scope(self, attr_v)
                 infer.add_var_to_live_scope(self, key_v)
 
+                # add map to maps
+                self.gx.maps[map_name] = map
+
 
             case "LOOKUP":
                 '''
@@ -510,7 +522,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 '''
                 for i, _v in enumerate(args):
                     var = infer.get_variable(self, i, _v.value, action)
-                    action.vars.append(vars)
+                    action.vars.append(var)
 
             case "SEND":
                 pass

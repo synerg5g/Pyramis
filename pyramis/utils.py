@@ -290,10 +290,8 @@ class FileParser:
         # store #define values
         self.parse_constants()
 
+        # create struct objects for this header
         self.isolate_structs()
-        # if "asn1_ref" in str(self.current_file.stem):
-        #     for struct in self.structs.values():
-        #         print(struct)
 
         f_hdr.close()
     
@@ -364,6 +362,7 @@ class FileParser:
             m_union = re.match(R_TYPEDEF_UNION, line)
             m_typedef = re.match(R_TYPEDEF, line)
             m_asn_sequence = re.match(R_ASN_SEQUENCE, line)
+
             if (
                 m_simple_attr or 
                 m_compound_attr or 
@@ -574,7 +573,7 @@ class Struct:
         self.name = name # typedef struct <tag_name> {} <alias_name>
         self.tag_name = name
         self.attributes = {} # attr_type_str: attr
-        
+
         self.vars = {} # for map struct only.
 
     def __str__(self):
@@ -655,13 +654,9 @@ class Preprocessor:
         """
         parts = condition.split(" ", 2)
         if len(parts) == 1:
-            if parts[0][-1] == ")":
-                parts[0] = parts[0][:-1]
             transformed_string = f"('{parts[0]}')"
         else:
             lhs, operator, rhs = parts
-            if rhs[-1] == ")":
-                rhs = rhs[:-1]
             transformed_string = f"('{lhs}' {operator} '{rhs.strip()}')"
 
         return transformed_string
@@ -704,7 +699,7 @@ class Preprocessor:
                 args = args.split("#")[0]
                 # logger.debug("inter args: %s", args)
                 if ")" in args:
-                    args = args.replace(")", "")
+                    args = args.replace(")", "") # erases both bracks in case of MACRO
             # logger.debug("New args: %s", args)
         else:
             # pass, break, continue etc.
@@ -730,6 +725,9 @@ class Preprocessor:
                 branch_condition = branch_args[1]
                 transformed_string = f"{tabs * ' '}if ('{branch_flag}' and {self.parse_condition(branch_condition[:-1])}):"
             else:
+                if args.count(")") > args.count("("):
+                    args = args[:-1]
+                print(args)
                 transformed_string = f"{tabs * ' '}if{self.parse_condition(args)}:"
 
             return transformed_string
@@ -742,7 +740,6 @@ class Preprocessor:
         
         elif action in ("PASS", "CONTINUE", "BREAK"):
             return f"{tabs * ' '}{action.lower()}"
-
         elif action in PYRAMIS_ACTIONS:
             #print(action)
             args_list_comma = args.split(",")
