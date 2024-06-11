@@ -137,6 +137,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
         # self.validate_walk()
         for event in self.events.values():
+            try:
+                print(f"Event vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
+            except:
+                print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
+                
             for action in event.actions:
                 if isinstance(action, python.Action):
                     print(f"Action: {action.name}")
