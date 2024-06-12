@@ -199,6 +199,7 @@ class GlobalInfo:
                     _ret = line.split("(")[0].split()
                     _func = _ret[-1] # name of the func
                     _ret_type = " ".join(e for e in _ret[:-1])
+                    print(f"parse udf {_func}")
 
                     _ptr = 0
                     if "*" in _ret_type or "*" in _func:
@@ -245,10 +246,10 @@ class GlobalInfo:
                     if udf.name in self.udfs:
                         udf.name = f"__{udf.name}"
                     if encoder:
-                        self.encoders[for_type] = udf
+                        self.encoders[_func] = udf
                         encoder = False
                     if decoder:
-                        self.decoders[for_type] = udf
+                        self.decoders[_func] = udf
                         decoder = False
                     self.udfs[udf.name] = udf
 
@@ -269,8 +270,9 @@ class GlobalInfo:
         #         print(v)
         
         # get user-defined types
-        user_parser = utils.Parser(self, self.user_utils, self.user_message_types_path)
-        all_user_types = user_parser.parse_lib()
-        self.user_base_types = consolidate_duplicate_types(all_user_types)
+        if self.user_utils.is_dir():
+            user_parser = utils.Parser(self, self.user_utils, self.user_message_types_path)
+            all_user_types = user_parser.parse_lib()
+            self.user_base_types = consolidate_duplicate_types(all_user_types)
 
         #print(f"System has {len(self.pyramis_base_types) + len(self.user_base_types)} valid types.")

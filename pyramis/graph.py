@@ -138,7 +138,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # self.validate_walk()
         for event in self.events.values():
             try:
-                print(f"Event vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
+                print(f"Event {event.name}: vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
             except:
                 print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
                 
@@ -195,7 +195,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     # just return untyped variables
                     var = python.Variable(i, _v, self.live_event)
             else:
-                print(f"Impossible: Event variables cannot have been encountered before the event itself.")
+                # create and return untyped variable
+                assert(not var.type)
+                #print(f"Impossible: Event variables cannot have been encountered before the event itself.")
             
             event.vars.append(var)
             self.events[event.name] = event
@@ -327,6 +329,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             assert(typed[0].type.equals(typed[1].type)) 
 
                     elif not var.type:
+                        print(f"Attempt to copy lhs type to rhs, {_v.value}")
                         untyped.append(var)
                         if len(typed) == 1:
                             var.type = typed[0].type
