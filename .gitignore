@@ -3,3 +3,6 @@ pyramis.egg-info
 __old__
 Utils
 .DBG
+pyramis/__logs
+pyramis/__pycache__
+pyramis/mini-test
