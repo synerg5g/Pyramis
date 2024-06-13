@@ -1,12 +1,12 @@
-Pyramis-Translator
+Pyramis
 ==================
-A source-to-source compiler used to demonstrate the feasibility of Pyramis 
-as a DSL for 3GPP multi-tier systems.
+**Pyramis** is a Domain-Specific language that can specify multi-tier systems of variying complexities. 
+
+**The Pyramis-to-C++ compiler** provided converts a NF
 
 Usage
 -----
 Create a venv, pip install from source.
-https://realpython.com/python-virtual-environments-a-primer/
 0. `python3 -m venv .pyramis` -> `source .pyramis/bin/activate`
 1. `pip install .`                                  # run setup.py in cwd
 2. `pyramis <NODE> <options>`                      # default will be translate to C++.
@@ -19,9 +19,17 @@ Path requirements:
 - Any C++ utilities/source directories must be present just outside this directory.
 
 Input files: `node/<node>.dsl`, `node/udf.h`, `node/udf.cpp`
+
 Output files: `<node>_linking.cpp`, `linkingheader.h`, `contexts.h`, `<node>platform.cpp` 
 
 Functionality
 -------------
-Verifies type consistency in the processing-file specification.
-Enforces the asn-standard-types-only restriction. (i.e. all UDFs must have an interface that uses asn-standard-types)
+
+<details>
+    <summary>Async Projections</summary>
+
+### Async Projections
+this and that and this and that
+</details>
+
+## :rocket: Performance

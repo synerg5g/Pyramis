@@ -590,6 +590,27 @@ class Struct:
             encoded_attributes[attr.id] = attr.to_json()
         return {"__name__": self.name, "__attributes__": encoded_attributes}
 
+class Interface:
+    def __init__(self, interface_dict):
+        self.name = interface_dict["Name"]
+        self.app_protocol = interface_dict["ApplicationProtocol"]
+        self.message_type = interface_dict["MessageType"]
+        self.transport_protocol = interface_dict["TransportProtocol"]
+        self.conn_type = interface_dict["ConnectionType"]
+        self.ip = interface_dict["IP"]
+        self.port = interface_dict["Port"]
+        self.processing = interface_dict["Processing"]
+        # peer nodes
+        self.peer_nodes = interface_dict["PeerNodes"]
+
+        
+    def is_peer_node(self, maybe_peer_node):
+        if maybe_peer_node in self.peers:
+            return True
+        else:
+            return False
+
+
 PYRAMIS_ACTIONS = [
     #"ASSERT",
     "SET",    # Indicate set message IEs 

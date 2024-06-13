@@ -533,7 +533,24 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     action.vars.append(var)
 
             case "SEND":
-                pass
+                '''
+                SEND(<message_body_struct>, <sendingNFInterface>, <peerNFname>, <peerNFInterface>, <callbackname>) 
+                sendData()
+                - If no callback, fd must exist in keytofdmap.
+                - If callback present, pass NULL, new socket will be assigned by this NF
+
+                void send_data(std::string peer_ip, int peer_port, std::vector<char>& msg, _e_connectionType conn_type,
+                                _e_protocols protocol, NODE peer_node, size_t message_length, int procedure_key_or_original_receiver_fd, 
+                                callback, nfvInst)
+                '''
+                # get peer_ip, peer_port, protocol, own_conn_type from interfaces.json
+                # the procedure_key must exist in ancestor scopes of an EVENT that contains a SEND.
+                # if args[-1] == NULL : 
+                #   # store that variable in .vars, later get val from fd_to_key_map
+                #  else:
+                #     # only pass the the procedure_key
+                # procedure key is defined as the ident passed to the keygen UDF
+                message = args[0].value
 
             case "TIMER_STOP":
                 pass

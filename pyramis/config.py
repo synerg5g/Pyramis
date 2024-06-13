@@ -2,6 +2,7 @@ import os
 import sys
 import pathlib
 import re
+import json
 from . import python
 from . import utils
 from . import infer
@@ -68,6 +69,8 @@ class GlobalInfo:
         self.decoders = {}
         self.pyramis_base_types = None
         self.user_base_types = None
+        self.intefaces = {}
+        self.peer_interfaces = {}
 
         # codegen
         self.all_events = set()
@@ -97,32 +100,28 @@ class GlobalInfo:
         self.modules = {} # cache of py modules handled just in case
 
     def get_decoder(self, decoder_name):
-        for encoder in self.encoders.values():
-            if encoder.name == decoder_name:
-                error.error("Encoder `%s` specified in action DECODE: Check .dsl"%encoder.name)
+        if decoder_name in self.encoders:
+            error.error("Encoder `%s` specified in action DECODE: Check .dsl"%self.encoders[decoder_name].name)
         
-        for decoder in self.decoders.values():
-            assert(isinstance(decoder, python.UserDefined))
-            if decoder.name == decoder_name:
-                return decoder
-        error.error("Invalid decoder `%s`: Check udf.h"%decoder_name)
+        if decoder_name in self.decoders:
+            return self.decoders[decoder_name]
+        else:
+            error.error("Invalid decoder `%s`: Check udf.h"%decoder_name)
 
     def get_encoder(self, encoder_name):
-        for decoder in self.decoders.values():
-            if decoder.name == encoder_name:
-                error.error("Decoder `%s` specified in action ENCODE: Check .dsl."%decoder.name)
+        if encoder_name in self.decoders:
+            error.error("Decoder `%s` specified in action ENCODE: Check .dsl."%self.decoders[encoder_name].name)
         
-        for encoder in self.encoders.values():
-            if encoder.name == encoder_name:
-                return encoder
-        error.error("Invalid Encoder `%s`: Check udf.h"%encoder_name)
+        if encoder_name in self.encoders:
+            return self.encoders[encoder_name]
+        else:
+            error.error("Invalid Encoder `%s`: Check udf.h"%encoder_name)
 
     def get_udf(self, udf_name):
         if udf_name in self.udfs:
             return self.udfs[udf_name]
         else:
             error.error("Invalid UDF: `%s`. Check udf.h."%udf_name)
-        
     
     def init_directories(self, args):
         if args.subcmd == "translate":
@@ -150,20 +149,30 @@ class GlobalInfo:
         self.user_utils = self.cwd / "utils"
     
     def parse_interfaces(self):
+        print("Parse Interfaces")
         # find interfaces.json
         _in = self.cwd / "interfaces.json"
         if not _in.is_file():
-            print("Error: interfaces.json not defined.")
+            error.error("Interfaces.json not defined.")
             sys.exit(1)
 
         self.interfaces_path = _in
+        with open(self.interfaces_path, "r") as f_interfaces_r:
+            interfaces = json.load(f_interfaces_r)
+            assert(isinstance(interfaces, dict))
 
-        # store info so that SEND can easily verify validity
-        # -- find nf_name in json, error if not
-        # -- store my_interfaces, peer_nf, connection details
+            for node in interfaces:
+                print(node)
+                _interfaces = interfaces[node]["Interfaces"] # list of interfaces
+                if node == self.nf_name:
+                    # own node
+                    for _interface in _interfaces:
+                        self.interfaces[node] = utils.Interface(_interface)
+                else:
+                    # peer_node
+                    self.peer_interfaces[node] = utils.Interface(_interface)
 
-
-        # data = json.load(_in)
+            error.error("Node name mismatch (cmdline and interfaces.json). Please fix")
 
     def parse_udfs(self):
         '''
