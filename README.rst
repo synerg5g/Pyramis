@@ -1,19 +1,21 @@
-# Pyramis
 **Pyramis** is a Domain-Specific language that enables you to specify multi-tier systems of variying complexities with minimal ambiguity:
+
+#. **Specify** the nodes of your multi-tier system.
+#. **Analyze** each node specification to ensure validity under Pyramis rules.
+#. **Translate** each node specification to a C++ implementation.
 
 Quick start
 ===========
 
-#. **Version** your data and models.
-   Store them in your cloud storage but keep their version info in your Git repo.
 
-#. **Iterate** fast with lightweight pipelines.
-   When you make changes, only run the steps impacted by those changes.
+Installation
+============
+At present, Pyramis can only be installed from source.
 
-#. **Track** experiments in your local Git repo (no servers needed).
+PyPI (Python)
+-------------
+.. code-block:: bash
 
-#. **Compare** any data, code, parameters, model, or performance plots.
-
-#. **Share** experiments and automatically reproduce anyone's experiment.
+   pip install git+git://github.com/armaanchowfin/pyramis.git
 
 
