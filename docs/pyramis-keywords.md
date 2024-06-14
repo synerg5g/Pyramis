@@ -1,3 +1,27 @@
+### 📌 Pyramis Syntax
+Pyramis defines keywords that are used to specify various kinds of user-level message processing actions. They can be broadly categorised as follows:
+<details>
+<summary> <strong>Context Actions</strong></summary>
+ <code>STORE(__in_map_name, __at_map_key, __at_map_struct_attribute, __value)</code>
+
+ <code>LOOKUP(__and_store_in_ident, __from_map_name, __key, __attribute_of_map_struct)</code>
+</details>
+
+<details>
+<summary> <strong>Message and Information Element (IE) Actions</strong></summary>
+</details>
+
+<details>
+<summary> <strong>Logical Actions</strong></summary>
+</details>
+
+<details>
+<summary> <strong>Special Actions</strong></summary>
+</details>
+
+
+
+
 ### 📖 Components of a Pyramis Specification
 <details>
 <summary> <strong>Interface file</strong></summary>
@@ -6,7 +30,6 @@
   Among other configuration options, it specifies peer nodes and protocols which are used by the compiler to validate the flow of message `SEND`s, and also help in the subsequent generation of the platform file.
 
 </details>
-
 
 <details>
 <summary> <strong>Processing File</strong></summary>
