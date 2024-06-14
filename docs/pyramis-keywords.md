@@ -35,19 +35,28 @@ Pyramis defines <ins><strong>action</strong></ins> keywords that are used to spe
 <details>
 <summary> <strong>Interface file</strong></summary>
   The <strong>interface file</strong> is a json file that describes the architecture of your multi-tier system in terms of individual nodes and their <ins>interface descriptions</ins>.
-  The interface file has a <a href="https://github.com/armaanchowfin/pyramis/blob/master/examples/login-system/interfaces.json">fixed format </a>, enforced by the compiler. 
+  The interface file has a <a href="https://github.com/armaanchowfin/pyramis/blob/master/examples/login-system/interfaces.json">fixed format </a>, enforced by the compiler.
+ 
+  - The definition of an interface contains several attributes required by Pyramis such as the <ins>port</ins> and the <ins>name of the <code>EVENT</code></ins> that should be invoked on receipt of a message on this interface
+
   Among other configuration options, it specifies peer nodes and protocols which are used by the compiler to validate the flow of message `SEND`s, and also help in the subsequent generation of the platform file.
 
 </details>
 
 <details>
 <summary> <strong>Processing File</strong></summary>
- In this file, written separately for each node in the system, the developer writes the logic
-for processing incoming messages at the node.
+ This file must contain every <code>EVENT</code> definition associated with the current node. 
+ 
+ - In this file, written separately for each node in the system, the developer defines the procedural logic to process incoming messages at the node. 
+ - The logic is defined in terms of Pyramis <code>EVENT</code>s that encapsulate <code>Action</code>s.
 </details>
 
 <details>
 <summary> <strong>User-Defined Functions (UDF) File</strong></summary>
+ These refer to a C++ source file udf.cpp and its corresponding header udf.h. 
+ 
+ - The <ins><code>UDF</code> keyword</ins> allows a user to indicate a call to a custom, complex function that cannot be expressed by solely using Pyramis keywords.
+ - The <ins><code>UDF</code></ins> is a repository for every <code>UDF</code> used by every node in the system.
 </details>
 
 
