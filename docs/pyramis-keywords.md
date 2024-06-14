@@ -1,12 +1,11 @@
 ### 📖 Components of a Pyramis Specification
 <details>
 <summary> <strong>Interface file</strong></summary>
-  The interface file is a json file that describes the architecture of your multi-system in terms of individual nodes and their <ins>interface descriptions</ins>.
+  The [interface file](examples/login-system/interfaces.json) is a json file that describes the architecture of your multi-system in terms of individual nodes and their <ins>interface descriptions</ins>.
   An interface description consists of the following keys:
-  ![image](https://github.com/armaanchowfin/pyramis/assets/57800921/53532a67-1c07-4933-83ac-acc5cc17ed12)
 
 </details>
-
+[interface file](examples/login-system/interfaces.json)
 <details>
 <summary> <strong>Processing File</strong></summary>
 </details>
