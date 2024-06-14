@@ -17,7 +17,7 @@ PyPI (Python)
 ⚡️ Quick start
 ===========
 
-   Please read our `Pyramis Keyword Reference <docs/pyramis-keywords.rst>`_ for a complete list of processing keywords.
+   Please read our `Pyramis Keyword Reference <docs/pyramis-keywords.rst>`_ for tips on writing Pyramis specifications
 
 The recommended workflow is as follows:
 
