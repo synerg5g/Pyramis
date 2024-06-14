@@ -4,7 +4,7 @@
 #. **Analyze** each node specification to ensure validity under Pyramis rules.
 #. **Translate** each node specification to a C++ implementation.
 
-Installation
+⚙️ Installation
 ============
 At present, Pyramis can only be installed from source.
 
@@ -14,7 +14,7 @@ PyPI (Python)
 
    pip install git+https://github.com/armaanchowfin/pyramis.git
 
-Quick start
+⚡️ Quick start
 ===========
 
    Please read our `Pyramis Keyword Reference <docs/pyramis-keywords.rst>`_ for a complete list of processing keywords.
@@ -42,14 +42,10 @@ The recommended workflow is as follows:
 |                                               || Your NF specification has been converted to a running NF instance.                                 |
 +-----------------------------------------------+-----------------------------------------------------------------------------------------------------+
 
-How Pyramis Works
+💡 How Pyramis Works
 =================
 
 The Pyramis DSL aims to provide an alternative to text-based specifications for multi-tier networked systems. 
-The Pyramis Compiler is developed to demonstrate that there does exist a path from a Pyramis specification to a correct implementation - reflecting on the 
-expressive power of the DSL.
+- The Pyramis Compiler is developed to demonstrate that there does exist a path from a Pyramis specification to a correct implementation.
 
-To 
-
-
-
+   The `Pyramis Developer Reference <docs/dev-docs.rst>`_ contains a more detailed treatment.
