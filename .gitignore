@@ -2,7 +2,7 @@ pyramis.egg-info
 .pyramis
 __old__
 Utils
-.DBG
+*.DBG
 pyramis/__logs
 pyramis/__pycache__
 pyramis/mini-test
