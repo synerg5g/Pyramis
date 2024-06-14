@@ -16,6 +16,6 @@ PyPI (Python)
 -------------
 .. code-block:: bash
 
-   pip install git+git://github.com/armaanchowfin/pyramis.git
+   pip install git+https://github.com/username/repo.git
 
 
