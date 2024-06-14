@@ -66,11 +66,12 @@ Pyramis keywords can flexibly represent key aspects of most multi-tier systems. 
   
 <details>
 <summary> <strong>Well-Defined L-7 protocol library</strong></summary>
-  Pyramis supports multitier systems using the NGAP and HTTP L-7 protocols out of the box. However, rolling your own application-layer protocol would have to meet certain requirements: 
+  Pyramis supports multitier systems using the NGAP and HTTP L-7 protocols out of the box. However, custom application-layer protocol must meet certain requirements: 
 
 - Valid messages for custom protocols must be implemented as complete C/C++ structs. These files may be stored in a `utils` directory in the your root folder.
 - HTTP messages must represent and access their payload strings as attributes of nlohmann::json objects. We provide an HTTP library for this purpose.
 - All char arrays are interpreted as C++ `std::vector<char>`. Strings, if any, must be null-terminated.
+- Header-file library must be fully contained in a `/utils` directory.
 </details>
 
 <details>
