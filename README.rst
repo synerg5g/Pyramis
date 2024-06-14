@@ -4,6 +4,16 @@
 #. **Analyze** each node specification to ensure validity under Pyramis rules.
 #. **Translate** each node specification to a C++ implementation.
 
+Installation
+============
+At present, Pyramis can only be installed from source.
+
+PyPI (Python)
+-------------
+.. code-block:: bash
+
+   pip install git+https://github.com/armaanchowfin/pyramis.git
+
 Quick start
 ===========
 
@@ -35,16 +45,11 @@ The recommended workflow is as follows:
 How Pyramis Works
 =================
 
-Pyramis was developed to 
+The Pyramis DSL aims to provide an alternative to text-based specifications for multi-tier networked systems. 
+The Pyramis Compiler is developed to demonstrate that there does exist a path from a Pyramis specification to a correct implementation - reflecting on the 
+expressive power of the DSL.
 
-Installation
-============
-At present, Pyramis can only be installed from source.
+To 
 
-PyPI (Python)
--------------
-.. code-block:: bash
-
-   pip install git+https://github.com/armaanchowfin/pyramis.git
 
 
