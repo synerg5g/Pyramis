@@ -7,7 +7,6 @@ The Pyramis DSL aims to provide an alternative to text-based specifications for 
 Every python.Module has an associated modulevisitor that implements ast walk and creation of python.XXX objects.
 A global modulevisitor object tracks current state during the walk.
 1. Make a record of all the pyramis events i.e. functiondefs at walk init, along with the formal arguments passed in.
-- events as python.Functions, arguments as list of arg strings.
 2. subsequent visit_Functiondef builds python.Variable objects for each function param. 
 
 ## Typing Invariants:
@@ -34,7 +33,3 @@ python.variable encountered in an action must be stored in the appropriate scope
 6. CALL action variables must always be typed in visit_Call(). 
 On visit_Functiondef, if the variable untyped after get_variable -> CALL occurs in a different event
 On visit_Functiondef, if variable typed after get_variable -> CALL occurred before, was recorded. (by the search-in-calls pathway.)
-On visit_Call, if action == CALL, if variable untyped after get_variable -> ??
---> Need to link the variables of events to variables of calls somehow
-EVENT entry(a, b, c):
-    CALL (eventname, a, b) # stored in mv.calls as a python.Action(), formals [] = a,b
