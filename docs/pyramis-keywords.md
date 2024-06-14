@@ -1,5 +1,5 @@
 ### 📌 Pyramis Syntax
-Pyramis defines keywords that are used to specify various kinds of user-level message processing actions. They can be broadly categorised as follows:
+Pyramis defines <ins><strong>action</strong></ins> keywords that are used to specify various kinds of user-level message processing actions. They can be broadly categorised as follows:
 <details>
 <summary> <strong>Context Actions</strong></summary>
  Pyramis supports the notion of contexts that store application state. Contexts are always persistent
@@ -28,6 +28,11 @@ Pyramis defines keywords that are used to specify various kinds of user-level me
 
 ### 📖 Components of a Pyramis Specification
 <details>
+<summary> <strong>The <code>EVENT</code> Abstraction</strong></summary>
+ The Pyramis <strong>EVENT</strong> encapsulates processing actions that must occur on receipt of a message or on timer-expiry. All <strong>EVENT</strong>s must be defined in the processing file.
+</details>
+ 
+<details>
 <summary> <strong>Interface file</strong></summary>
   The <strong>interface file</strong> is a json file that describes the architecture of your multi-tier system in terms of individual nodes and their <ins>interface descriptions</ins>.
   The interface file has a <a href="https://github.com/armaanchowfin/pyramis/blob/master/examples/login-system/interfaces.json">fixed format </a>, enforced by the compiler. 
@@ -37,6 +42,8 @@ Pyramis defines keywords that are used to specify various kinds of user-level me
 
 <details>
 <summary> <strong>Processing File</strong></summary>
+ In this file, written separately for each node in the system, the developer writes the logic
+for processing incoming messages at the node.
 </details>
 
 <details>
