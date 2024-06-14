@@ -3,7 +3,7 @@ import os
 import subprocess
 import pathlib
 
-with open("README.md", "r") as fh:
+with open("README.rst", "r") as fh:
     long_desc = fh.read()
 
 with open("requirements.txt", "r") as fh:
