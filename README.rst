@@ -27,7 +27,7 @@ The recommended workflow is as follows:
 | Create Pyramis Specification                  || In a parent directory,                                                                             |                     
 |                                               ||  Fix names and interfaces of individual nodes, define ``interfaces.json``.                         |
 |                                               ||  For each node, use Pyramis keywords to define a processing file ``node_name.dsl``.                |         
-|                                               ||  UDFs, if any must be consolidated into a single ``udf.h``, `udf.cpp`` pair.                       |
+|                                               ||  UDFs, if any must be consolidated into a single ``udf.h``, ``udf.cpp`` pair.                       |
 +-----------------------------------------------+-----------------------------------------------------------------------------------------------------+
 | Analyze Pyramis Specification                 || To validate a pyramis specification of node *NF_A*, do:                                            |
 |                                               ||  ``$ pyramis translate NF_A``                                                                      |
