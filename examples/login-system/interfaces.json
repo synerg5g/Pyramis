@@ -1,0 +1,50 @@
+{
+    "NF_A": {
+        "Interfaces": [
+            {
+                "Name": "ia0",
+                "ApplicationProtocol": "synerp",
+                "MessageType": ["synerp"],
+                "TransportProtocol": "UDP_PROTOCOL",
+                "ConnectionType": "SHORT",
+                "IP": "127.0.0.1",
+                "Port": 5858,
+                "Processing": ["ia0_server_entry"],
+                "PeerNodes": [
+                    "NF_B"
+                ]
+            },
+            {
+                "Name": "ia1",
+                "ApplicationProtocol": "synerp",
+                "MessageType": ["synerp"],
+                "TransportProtocol": "TCP_PROTOCOL",
+                "ConnectionType": "SHORT",
+                "IP": "127.0.0.1",
+                "Port": 5757,
+                "Processing": ["ia1_server_entry"],
+                "PeerNodes": [
+                    "NF_B"
+                ]
+            }
+        ]
+    },
+
+    "NF_B": {
+        "Interfaces": [
+            {
+                "Name": "ib0",
+                "ApplicationProtocol": "synerp",
+                "MessageType": ["synerp"],
+                "TransportProtocol": "TCP_PROTOCOL",
+                "ConnectionType": "PERSISTENT",
+                "IP": "127.0.0.1",
+                "Port": 4848,
+                "Processing": ["ib0_server_entry"],
+                "PeerNodes": [
+                    "NF_B"
+                ]
+            }
+        ]
+    }
+}
