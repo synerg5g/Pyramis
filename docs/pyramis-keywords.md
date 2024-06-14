@@ -29,7 +29,7 @@ Pyramis defines <ins><strong>action</strong></ins> keywords that are used to spe
 ### 📖 Components of a Pyramis Specification
 <details>
 <summary> <strong>The <code>EVENT</code> Abstraction</strong></summary>
- The Pyramis <strong>EVENT</strong> encapsulates processing actions that must occur on receipt of a message or on timer-expiry. All <strong>EVENT</strong>s must be defined in the processing file.
+ The Pyramis <code>EVENT</code> encapsulates processing actions that must occur on receipt of a message or on timer-expiry. Each relevant <code>EVENT</code>s must be defined in the processing file.
 </details>
  
 <details>
