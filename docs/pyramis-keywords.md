@@ -2,7 +2,14 @@
 Pyramis defines keywords that are used to specify various kinds of user-level message processing actions. They can be broadly categorised as follows:
 <details>
 <summary> <strong>Context Actions</strong></summary>
+ Pyramis supports the notion of contexts that store application state. Contexts are always persistent
+ and are stored in <code>std::map<></code> as specified by the user.
+ 
  <code>STORE(__in_map_name, __at_map_key, __at_map_struct_attribute, __value)</code>
+ <ul>
+  <li>The <strong>STORE</strong> action is used to indicate storage of a value in a map. </li>
+  <li>In Pyramis, every map has an associated map struct that contains every attribute specified to be accessed or stored in it.</li>
+ </ul>
 
  <code>LOOKUP(__and_store_in_ident, __from_map_name, __key, __attribute_of_map_struct)</code>
 </details>
