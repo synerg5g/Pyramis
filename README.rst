@@ -7,6 +7,7 @@
 Quick start
 ===========
 
+   Please read our `Pyramis Keyword Reference <docs/pyramis-keywords.rst>`_ for a complete list of processing actions.
 
 Installation
 ============
