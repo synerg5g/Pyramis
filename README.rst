@@ -4,11 +4,6 @@
 #. **Analyze** each node specification to ensure validity under Pyramis rules.
 #. **Translate** each node specification to a C++ implementation.
 
-The **Pyramis-to-C++ Compiler** is developed to demonstrate:
-
-- There exists a path from a Pyramis specification to a correct implementation i.e. via the compiler.
-- This reflects on the validity of Pyramis as a specification language.
-
 ⚙️ Installation
 ============
 At present, Pyramis can only be installed from source.
@@ -51,10 +46,3 @@ The recommended workflow is as follows:
 =================
 
    Please read our `Pyramis Developer Reference <docs/dev-docs.rst>`_ for a more detailed treatment.
-
-The Pyramis DSL aims to provide an alternative to text-based specifications for multi-tier networked systems. 
-
-- The Pyramis Compiler is developed to demonstrate that there does exist a path from a Pyramis specification to a correct implementation.
-- This reflects on the validity of Pyramis as a specification language.
-
-   
