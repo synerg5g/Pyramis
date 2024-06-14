@@ -1,8 +1,9 @@
 ### 📖 Components of a Pyramis Specification
 <details>
 <summary> <strong>Interface file</strong></summary>
-  The <a href="url">interface file </a>is a json file that describes the architecture of your multi-system in terms of individual nodes and their <ins>interface descriptions</ins>.
-  An interface description consists of the following keys:
+  The <strong>interface file</strong> is a json file that describes the architecture of your multi-tier system in terms of individual nodes and their <ins>interface descriptions</ins>.
+  The interface file has a <a href="https://github.com/armaanchowfin/pyramis/blob/master/examples/login-system/interfaces.json">fixed format </a>, enforced by the compiler. 
+  Among other configuration options, it specifies peer nodes and protocols which are used by the compiler to validate the flow of message `SEND`s.
 
 </details>
 
