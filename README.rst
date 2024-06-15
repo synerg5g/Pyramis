@@ -39,7 +39,7 @@ PyPI (Python)
 
    cd pyramis/examples/login-server/Client
    make
-   ./client
+   ./build/client
 
 
 
