@@ -17,7 +17,31 @@ PyPI (Python)
 ⚡️ Quick start
 ===========
 
-show them how to run the test example
+#. **Install Pyramis**
+
+.. code-block:: bash
+
+   pip install git+https://github.com/armaanchowfin/pyramis.git
+
+
+2. **Analyze, build and run the login-server NF**
+
+.. code-block:: bash
+
+   cd pyramis/examples/login-server/Server
+   pyramis translate NF_A
+   pyramis build NF_A
+   pyramis run NF_A 1
+
+3. Run test client to verify 
+
+.. code-block:: bash
+
+   cd pyramis/examples/login-server/Client
+   make
+   ./client
+
+
 
 🕹️ Using Pyramis
 =================
