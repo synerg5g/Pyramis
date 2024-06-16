@@ -66,7 +66,9 @@ CONTINUE
 
 #### Networking Actions
 
-To specify fundamental networking operations.
+To specify fundamental networking operations
+
+Pyramis provides three actions: `GET_KEY`, `SET_KEY`, `SEND`
 
 ```Python
 # Returns the procedure key of the ongoing procedure instance and
@@ -89,7 +91,7 @@ SEND(__message, __sending_interface, __peer_nf_name, __receiving_interface, [__c
 
 #### Special Actions
 
-Pyramis provides
+Pyramis provides three actions: `UDF`, `CALL`, `MACRO` that perform specialised tasks.
 
 ```Python
 # Call the custom C++ function udf_name, with the appropriate expected arguments __args
