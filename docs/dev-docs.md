@@ -126,6 +126,51 @@ intermediate representation suitable for conversion to C++ code.
 
 <details>
 <summary> <strong> ⚒ Pyramis Compiler Driver</strong></summary>
+    
+Pyramis supports three kinds of commands:
+
+1. `pyramis translate NF`: Validate your Pyramis Specification, generate an error report if any irregularities detected.
+
+2. `pyramis build NF`: Generate an implementation from your Pyramis specification. A set of .cpp and .h files
+will be generated along with a base Makefile.
+
+4. `pyramis run NF num threads`: Run your generated NF implementation as a multithreaded process
+
+The compiler driver orchestrates the entire compilation process, right from parsing command-line
+options to generating C++ code. Its major functions are listed below.
+
+```
+Initialisation
+---------------
+1. Parse command-line, set global compiler configurations.
+2. Parse C++ protocol headers, UDF File and Interface File.
+3. Pre-process Pyramis Specification to Python.
+4. Create AST, begin AST walk.
+```
+
+```
+AST Walk
+--------
+Recursively visit each node
+1. Maintain scopes and update symbol tables
+2. Infer and assign types to identifier.
+3. Incrementally generate an IR of parsed Pyramis EVENTs, python.Actions and
+python.Maps.
+4. Report semantic errors
+```
+```
+Code Generation
+---------------
+Generate C++ files from IR
+1. Remove redundant Map accesses.
+2. Generate timer_expiry_context_t
+3. Emit translated EVENT definitions to processing file i.e. linking.cpp.
+4. Emit Map definitions to contexts.h.
+5. Emit event declarations to linking.h
+6. Emit networking code to platform.cpp and platform.h and generate Makefile.
+```
+
+
 </details>
 
 
