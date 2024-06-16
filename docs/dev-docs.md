@@ -16,6 +16,12 @@ differences in L-7 protocol. This is enabled by a general purpose header-file pa
 a set of base types for the system. The working assumption is that a given set of base types
 (along with encoders and decoders) completely specify the L-7 protocol of any multi-tier system
 
+# From Specification to Executable NF
+
+Pyramis keywords can represent key aspects of most multi-tier systems. However, to compile to
+a working implementation, certain constraints have to be imposed on the inputs and outputs.
+
+
 
 <details>
 <summary> <strong>🛠️ NF architecture under Pyramis</strong></summary>
