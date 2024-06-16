@@ -53,10 +53,17 @@ Pyramis keywords can represent key aspects of most multi-tier systems. However, 
 
 <details>
 <summary> <strong>Notion of procedure key</strong></summary>
-  The NF must generate a unique procedure key for each instance of procedure. Procedure may be simple (login request-response) or complex (SMF session-establishment). Complexity arises due to the requirement of demultiplexing messages received at a single interface to the correct message handler. The notion of "key" and its supporting `fd_to_key_map` and `key_to_fd_map` are implementation-specific constructs that enable this message demultiplexing.
+The NF must generate a unique procedure key for each instance of supported procedure.
+  
+- Procedure may be simple (login request-response) or complex (SMF session establishment).
+- Complexity arises due to the requirement of demultiplexing messages received at a
+single interface to the correct message handler.
 
-- `procedure_key` is used by the NF application to maintain a synchronous message-processing flow despite asynchronous message ingress at an NF
-- A single NF independently initiates procedure requests.
+The notion of key and its supporting `fd_to_key_map` and `key_to_fd_map` are
+implementation-specific constructs that enable this message demultiplexing.
+
+- procedure key is used by the NF application to maintain a synchronous message processing flow despite asynchronous message ingress at an NF.
+- Your UDF File must always contain a keygen function, defined via `//@@keygen`
   </details>
 
 
