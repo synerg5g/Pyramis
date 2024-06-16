@@ -244,6 +244,18 @@ structs to generate the appropriate recursive `python.Type` and assigns it to id
 
 <details>
 <summary> <strong> ⚒ Type Assignment and Inference</strong></summary>
+
+In the Pyramis Compiler, identifiers are represented as python.Variable objects. Depending on
+the progress of the AST Walk, an identifier may be typed or untyped. A identifier is considered
+typed if its `python.Variable` has been assigned a concrete `python.Type`.
+
+`CREATE_MESSAGE, ENCODE, DECODE, UDF` are the only Pyramis keywords that are allowed to
+directly assign concrete types to an identifier. All other actions must obtain their types indirectly
+by an inference procedure. Oftentimes, the compiler is fortunate and encounters typed identifiers
+at each action - implying that a concrete type was assigned at some point before the current
+action. However, on several occasions identifiers are assigned concrete type after the first usage.
+As a uniform solution to this problem, the Pyramis compiler <ins>creates and maintains a hierarchy
+of Scopes</ins>
 </details>
 
 
