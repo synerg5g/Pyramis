@@ -3,6 +3,7 @@
 #. **Specify** the nodes of your multi-tier system.
 #. **Analyze** each node specification to ensure validity under Pyramis rules.
 #. **Translate** each node specification to a C++ implementation.
+#. **Run** each generated NF implementation as a multithreaded process.
 
 ⚙️ Installation
 ============
