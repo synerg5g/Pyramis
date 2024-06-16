@@ -170,7 +170,7 @@ application layer protocol. For example, the internet communications occur over 
 protocol, and certain 3GPP NF-NF communications are required to use either the NGAP or PFCP
 protocols.
 
-At its core, an NF protocol is specified by its <ins>state machine, message types, and encoder-decoder
+At its core, a L-7 application protocol is specified by its <ins>state machine, message types, and encoder-decoder
 pairs</ins>, all defined and distributed via <ins>protocol libraries</ins>. C++ protocol libraries provide C++
 structs and classes in header files to define message types, and define encoders and decoders
 for each valid message-type in the protocol. The state-machine of a protocol is 
