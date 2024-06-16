@@ -1,29 +1,3 @@
-# EVENTs are list of Pyramis Actions.
-# EVENT is rep via a python.Function object.
-# Every Action has an "action". and set of user attributes with Python.Type().
-# 
-# Sometimes a type cannot be assigned to an identifier before the first visit to its
-# enclosing action.
-#  --- in this case, store ref to the attribute in untyped attr list stored in the Action.
-#  --- Also store refs to all Actions that are yet untyped in the global/scope context.
-#  --- while traversing the current scope, keep updating the symbol table.
-#  --- At exit from the untyped scope, for each untyped attribute in each untyped EVENT,
-#  --- look for the attribute in symtab, and assign a type to the Action if found.
-#  --- if not found, raise an incomplete type error to errorlog.
-# 
-# only UDF, CREATE_MESSAGE, SET_KEY can assign concrete types to attributes.
-# other actions (SET) must be checked for consistency with previously assigned types.
-# --- SET can also be used to assign type :if the base attr of the lhs (lhs.split(.)[0])
-# --- is in the symtab of current or ancestor scopes, and variable on rhs is untyped in
-# --- scope, assign the type of rhs. (if char * make ?? <char> or string)
-# - See get_variable etc. in infer.py
-# 
-# per-action processing is definitely needed in visit_Call()
-#
-# KEY INVARIANT: Single python.Variable object, "stored" in scope symtab. All other
-# objects maintain references to the single instance and can update it at any time.
-# called from platform file.
-
 EVENT do_echo(message_body):
     ENCODE(SynerPMessageEncode, message_body_enc, message_body, message_body_enc_sz)
     SEND(message_body, <sendingNFInterface>, <peerNFname>, <peerNFInterface>, <callbackname>) # sendingNFInterface to generate protocol

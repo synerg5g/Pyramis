@@ -452,6 +452,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                                     # - types will be updated simultaneously though.
                                     # Q. Can I create a new variable who's type is a ref to 
                                     # the type of the event arg?
+                                    # this hasnt been tested yet.
+                                    # its clearlywrong. see _type
                                     var = python.Variable(i, _v, action, event.vars[i].type)
                             except KeyError as k:
                                 error.error("Extraneous argument in current CALL to event `%s`: %s.\n" %event.name %_v.value)  
