@@ -69,9 +69,14 @@ CONTINUE
 To specify fundamental networking operations.
 
 ```Python
-GET_KEY()
+# Returns the procedure key of the ongoing procedure instance and
+# store the value in __ident.
+# procedure key is always mapped to the sending file descriptor
+GET_KEY(__ident)
 
-SET_KEY()
+# Create a mapping between the sending file descriptor and the
+# procedure key __key
+SET_KEY(__key)
 
 # Send the message __message via own interface __sending_interface to
 # peer __peer_nf_name at its interface __receiving_interface.
@@ -87,17 +92,18 @@ SEND(__message, __sending_interface, __peer_nf_name, __receiving_interface, [__c
 Pyramis provides
 
 ```Python
+# Call the custom C++ function udf_name, with the appropriate expected arguments __args
+# Often __udf_name will refer to a function that is dependent on the L-7
+# protocol libraries
 UDF(__udf_name, [__args]*)
 
+# Call `EVENT` __event_name, passing in the appropriate arguments __args.
 CALL(__event_name, [__args]*)
 
+# Specify the usage of a named constant __macro_name
+# Often __macro_name will be exposed by the L-7 protocol libraries.
 MACRO(__macro_name)
 ```
-
-
-
-
-
 
 ### 📖 Components of a Pyramis Specification
 <details>
