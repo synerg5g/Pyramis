@@ -58,6 +58,10 @@ IF(__condition[op __condition]*)... [ELSE]
 
 # Initialise a loop counter identifier __counter to value __start, loop until its value is __end
 LOOP(__counter, __start, __end)
+
+# Early exit/entry from/to a loop iteration.
+BREAK
+CONTINUE
 ```
 
 #### Networking Actions
@@ -76,6 +80,7 @@ SET_KEY()
 # response to __message from the peer.
 # If not specified, implies that __message was a response to a previous request
 SEND(__message, __sending_interface, __peer_nf_name, __receiving_interface, [__callback])
+```
 
 #### Special Actions
 
@@ -83,6 +88,11 @@ Pyramis provides
 
 ```Python
 UDF(__udf_name, [__args]*)
+
+CALL(__event_name, [__args]*)
+
+MACRO(__macro_name)
+```
 
 
 
