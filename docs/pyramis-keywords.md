@@ -18,6 +18,7 @@ LOOKUP(__ident, __map_name, __key, __attribute)
 ```
 
 #### Message and Information Element (IE) Actions
+
 Retrieving and manipulating message fields (IEs) is a fundamental operation in all networked systems.
 
 Pyramis provides 5 keywords: `CREATE_MESSAGE`, `SET`, `APPEND`, `ENCODE`, `DECODE`
@@ -44,6 +45,21 @@ ENCODE(__encoder_name, __to_buffer, __message, __size)
 DECODE(__decoder_name, __from_buffer, __message)
 ```
 
+#### Control-Flow Actions
+
+To provide finer control over the specification of control-flow operations.
+
+Pyramis provides three keywords: `IF`, `ELSE`, `LOOP`
+
+```Python
+# Test condition __condition, where __condition is of the form `a` op `b`
+# such that `a` and `b` are __conditions and op is a logical operator
+#
+# ELSE if specified follows the usual logical semantics.
+IF(__condition[op __condition]*)... [ELSE]
+
+# Initialise a loop counter identifier __counter to value __start, loop until its value is __end
+LOOP(__counter, __start, __end)
 
 <details>
 <summary> <strong>Conterol-Flow Actions</strong></summary>
