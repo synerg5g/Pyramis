@@ -60,14 +60,10 @@ IF(__condition[op __condition]*)... [ELSE]
 
 # Initialise a loop counter identifier __counter to value __start, loop until its value is __end
 LOOP(__counter, __start, __end)
+```
 
-<details>
-<summary> <strong>Conterol-Flow Actions</strong></summary>
-</details>
+#### Special Actions
 
-<details>
-<summary> <strong>Special Actions</strong></summary>
-</details>
 
 ### 📖 Components of a Pyramis Specification
 <details>
