@@ -1,22 +1,40 @@
 ### 📌 Pyramis Syntax
-Pyramis defines <ins><strong>action</strong></ins> keywords that are used to specify various kinds of user-level message processing actions. They can be broadly categorised as follows:
-<details>
-<summary> <strong>State-Management Actions</strong></summary>
+Pyramis defines <ins><strong>action</strong></ins> keywords that are used to specify various kinds of user-level message processing actions. They can be categorised into the following:
+
+#### State-Management Actions
+
  Pyramis supports the notion of contexts that store application state. Contexts are always persistent
- and are stored in <code>std::map<></code> as specified by the user.
- 
- <code>STORE(__in_map_name, __at_map_key, __at_map_struct_attribute, __value)</code>
- <ul>
-  <li>The <strong>STORE</strong> action is used to indicate storage of a value in a map. </li>
-  <li>In Pyramis, every map has an associated map struct that contains every attribute specified to be accessed or stored in it.</li>
- </ul>
+ and are stored in <code>std::map<></code>s as specified by the user.
 
- <code>LOOKUP(__and_store_in_ident, __from_map_name, __key, __attribute_of_map_struct)</code>
-</details>
+ - Each Pyramis Map has an associated map struct that is dynamically generated as attributes are accessed.
 
-<details>
-<summary> <strong>Message and Information Element (IE) Actions</strong></summary>
-</details>
+ ```Python
+STORE(__map_name, __key, __attribute, __value)
+
+LOOKUP(__ident, __map_name, __key, __attribute)
+```
+
+#### Message and Information Element (IE) Actions
+Retrieving and manipulating message fields (IEs) is a fundamental operation in all networked systems.
+
+Pyramis provides 5 keywords: `CREATE_MESSAGE`, `SET`, `APPEND`, `ENCODE`, `DECODE`
+
+```Python
+# Create a message of type __type and assign it to identifier __ident
+# 
+# If __size is specified, create a sequence of size __size of messages of type __type,
+# and assign it to identifier __ident
+CREATE_MESSAGE(__ident, __type, [__size])
+
+SET(__lhs, __rhs)
+
+APPEND(__ident, __value)
+
+ENCODE(__encoder_name, __to_buffer, __message, __to_buffer_size)
+
+DECODE(__decoder_name, __from_buffer, __message)
+```
+
 
 <details>
 <summary> <strong>Conterol-Flow Actions</strong></summary>
