@@ -69,7 +69,7 @@ The fundamental Pyramis abstraction is the `EVENT`. The Pyramis `EVENT` encapsul
 # Define the event __event_name and specify its formal arguments __args.
 EVENT(__event_name, [__args]*)
 ```
-Each relevant EVENT must be defined in the processing file as a series of <ins><strong>Action</strong></ins>s.
+Each relevant `EVENT` must be defined in the processing file as a series of <ins><strong>Action</strong></ins>s.
 
 - **Actions** are keywords that are used to specify various kinds of user-level message processing actions. They can be categorised into the following:
 
