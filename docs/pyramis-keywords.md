@@ -4,9 +4,9 @@ Pyramis defines <ins><strong>action</strong></ins> keywords that are used to spe
 #### State-Management Actions
 
  Pyramis supports the notion of contexts that store application state. Contexts are always persistent
- and are stored in <code>std::map<></code>s as specified by the user.
+ and are stored in <code>std::map<></code>s as specified by the user. Each Pyramis Map has an associated map struct that is dynamically generated as attributes are accessed.
 
- - Each Pyramis Map has an associated map struct that is dynamically generated as attributes are accessed.
+ Pyramis provides 2 keywords: `STORE` and `LOOKUP`
 
  ```Python
 STORE(__map_name, __key, __attribute, __value)
