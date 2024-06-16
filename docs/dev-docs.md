@@ -162,6 +162,23 @@ Generate C++ files from IR
 
 <details>
 <summary> <strong> ⚒ Types in Pyramis</strong></summary>
+    
+Any reasonable networked system implementation defines and is dependent on its L-7 i.e.
+application layer protocol. For example, the internet communications occur over the HTTP L-7
+protocol, and 3GPP NF-NF communications are required to use either the NGAP or PFCP
+protocols.
+
+At its core, an NF protocol is specified by its state machine, message types, and encoder-decoder
+pairs, all defined and distributed via <ins>protocol libraries</ins>. C++ protocol libraries provide C++
+structs and classes in header files to define message types, and define encoders and decoders
+for each valid message-type in the protocol. The state-machine of a protocol is 
+maintained by the application itself, and is a function of the underlying protocol library.
+
+Likewise, an NF implementation, and its Pyramis specification must necessarily depend on external protocol libraries. Pyramis enables specification of these type constraints
+via the `CREATE_MESSAGE`, `ENCODE`, `DECODE` and `UDF` keywords.
+
+From the above discussion, it is clear that a valid Pyramis specification of each node must be
+associated with a set of base types that arise from its assumed L-7 protocol.
 </details>
 
 
