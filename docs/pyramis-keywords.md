@@ -1,4 +1,6 @@
 ### 📖 Components of a Pyramis Specification 
+In the Pyramis workflow, three files are essential towards specifying your multitier system.
+
 <details>
 <summary> <strong>Interface file</strong></summary>
   The <strong>interface file</strong> is a json file that describes the architecture of your multi-tier system in terms of individual nodes and their <ins>interface descriptions</ins>.
