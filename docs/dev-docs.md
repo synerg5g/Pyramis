@@ -254,8 +254,34 @@ directly assign concrete types to an identifier. All other actions must obtain t
 by an inference procedure. Oftentimes, the compiler is fortunate and encounters typed identifiers
 at each action - implying that a concrete type was assigned at some point before the current
 action. However, on several occasions identifiers are assigned concrete type after the first usage.
-As a uniform solution to this problem, the Pyramis compiler <ins>creates and maintains a hierarchy
-of Scopes</ins>
+
+As a uniform solution to this problem, the Pyramis compiler creates and maintains a hierarchy
+of Scopes
+
+<ins>**Note on Pyramis IR and ModuleVisitor**<ins>
+
+The AST Walk is implemented by a custom `ModuleVisitor` subclass of the `ast.NodeVisitor`
+class. The `ModuleVisitor` performs a depth-first traversal of the `ast.Node`s in the AST of the
+pre-processed Pyramis specification, dynamically dispatch handler functions linked to each
+`ast.Node` type. Each handler function performs core functions related to IR creation and type
+inference.
+
+The Pyramis IR is designed to enable easy generation of C++ code from the allowed Pyramis
+keywords. Keeping these in mind, the fundamental constructs of a Pyramis specification are
+defined as `python.Event` for `EVENT`s, `python.Actions` for Pyramis Keywords, and `python.Map`s
+for maps accesses. Each of these constructs also depends on their own variables being typed,
+hence the IR defines `python.Variable` and a recursive `python.Type`.
+
+With this in mind, a Pyramis processing file can be parsed into a series of python.Events
+containing a series of python.Actions. Both of these contain sets of python.Variables
+representing the arguments passed to the keyword actions The primary objective of the AST
+walk is to generate this complete Pyramis IR.
+
+_A complete Pyramis IR is one in which every variable is typed_. To achieve this target,
+more constructs are required such as <ins>Scopes and a mechanism for type inference</ins>. Once the
+generated IR is validated, it is used to directly emit C++ code based on certain code-generation
+rules.
+
 </details>
 
 
