@@ -25,7 +25,6 @@ Pyramis provides 5 keywords: `CREATE_MESSAGE`, `SET`, `APPEND`, `ENCODE`, `DECOD
 
 ```Python
 # Create a message of type __type and assign it to identifier __ident
-# 
 # If __size is specified, create a sequence of size __size of messages of type __type,
 # and assign it to identifier __ident
 CREATE_MESSAGE(__ident, __type, [__size])
@@ -54,15 +53,40 @@ Pyramis provides three keywords: `IF`, `ELSE`, `LOOP`
 ```Python
 # Test condition __condition, where __condition is of the form `a` op `b`
 # such that `a` and `b` are __conditions and op is a logical operator
-#
-# ELSE if specified follows the usual logical semantics.
+# ELSE, if specified, follows the usual logical semantics.
 IF(__condition[op __condition]*)... [ELSE]
 
 # Initialise a loop counter identifier __counter to value __start, loop until its value is __end
 LOOP(__counter, __start, __end)
 ```
 
+#### Networking Actions
+
+To specify fundamental networking operations.
+
+```Python
+GET_KEY()
+
+SET_KEY()
+
+# Send the message __message via own interface __sending_interface to
+# peer __peer_nf_name at its interface __receiving_interface.
+#
+# __callback, if specified, registers the event to be called on receipt of
+# response to __message from the peer.
+# If not specified, implies that __message was a response to a previous request
+SEND(__message, __sending_interface, __peer_nf_name, __receiving_interface, [__callback])
+
 #### Special Actions
+
+Pyramis provides
+
+```Python
+UDF(__udf_name, [__args]*)
+
+
+
+
 
 
 ### 📖 Components of a Pyramis Specification
