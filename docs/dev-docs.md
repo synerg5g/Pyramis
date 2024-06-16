@@ -109,11 +109,6 @@ on receipt of the incoming message data, but are defined in the processing file.
 
 
 ## 🛠️ Pyramis-to-C++ Compiler
-The Pyramis Compiler is developed to demonstrate that Pyramis is a complete and flexible language. The primary goal of the Pyramis compiler is to output multithreaded, C++
-code from a Pyramis specification, as a reference implementation. 
-
-- By showing that a path exists from Pyramis specification to a correct implementation, (in our case, via a compiler), we demonstrate the correctness of
-Pyramis as a specification language.
 
 The Pyramis Grammar is functionally a subset of the Python Grammar. This allows a major
 convenience during compilation to C++, i.e. The compiler does not require a custom lexer or a
