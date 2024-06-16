@@ -258,7 +258,7 @@ action. However, on several occasions identifiers are assigned concrete type aft
 As a uniform solution to this problem, the Pyramis compiler creates and maintains a hierarchy
 of Scopes
 
-<ins>**Note on Pyramis IR and ModuleVisitor**<ins>
+<ins>Note on Pyramis IR and ModuleVisitor<ins>
 
 The AST Walk is implemented by a custom `ModuleVisitor` subclass of the `ast.NodeVisitor`
 class. The `ModuleVisitor` performs a depth-first traversal of the `ast.Node`s in the AST of the
@@ -281,6 +281,65 @@ _A complete Pyramis IR is one in which every variable is typed_. To achieve this
 more constructs are required such as <ins>Scopes and a mechanism for type inference</ins>. Once the
 generated IR is validated, it is used to directly emit C++ code based on certain code-generation
 rules.
+
+<details>
+<summary> <strong> Scopes and Type Inference </strong></summary>
+    
+Pyramis scopes are of three kinds: `MODULE, EVENT and BLOCK`, corresponding to module-level,
+`EVENT`-level and `IF/LOOP`-level. The `ModuleVisitor` drives the creation of new scopes, addition of
+new `python.Variables` to the corresponding symbol-tables.
+
+In a simplistic interpreter design for a purely statically-typed language, a temporary stack of
+scopes starting at every `EVENT` would be sufficient to assign types to identifiers, as each would
+have to be declared before usage. For example, in C++ projects, calling a function without first
+declaring its typed signature is simply disallowed and leads to a compilation error. Pyramis
+`EVENT`s on the other hand, are not provided concrete types in the specification. A subsequent
+`CALL` (either from the same `EVENT` or another one) to that `EVENT` would similarly fail unless the typed
+signature is generated before. **This behaviour cannot be expected in Pyramis, as assigning
+explicit types destroys the purpose of a simple DSL syntax.**
+
+Since EVENT definitions and CALLs are coupled together, there is a requirement for a mechanism
+that allows sharing of appropriate variable and their types across EVENTs. The mechanism used
+by Pyramis is to maintain a <ins>persistent parent-pointer tree of scopes</ins>. In this setup, we develop a
+mechanism for inferring types for identifiers irrespective of the order in which they are assigned
+concrete types:
+
+```C++
+// The modulevisitor can store references to newly created ( untyped ) EVENT
+// variables in its own local scope , and store the python . EVENT
+// in a global collection of events with references to its python . Variables .
+//
+// Similarly , each python . Action i.e. CALL is stored in a global collection of
+// calls , with references to its own python . Variable .
+//
+// See source graph.py for full details .
+When a CALL is encountered :
+    if event was defined previously
+    // type inference across events
+    its variables would be referenced by an old scope
+    and by the old python . Event stored in the global
+    events map .
+        if the variable is typed :
+            copy the reference to the python . Type to the corresponding
+            variable of the CALL that is being processed .
+            ... etc
+        ..etc
+    ..etc
+
+When an EVENT is encountered :
+    if event was CALLed earlier :
+        assign CALL variable types to the EVENT .
+            If the event was typed earlier ,
+                // we have succeeded ,
+            if not ,
+                //untyped variable will be added to scope to be
+                // resolved later .
+            ..etc
+        ..etc
+    ..etc
+```
+    
+</details>
 
 </details>
 
