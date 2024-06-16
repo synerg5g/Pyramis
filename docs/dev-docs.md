@@ -1,3 +1,22 @@
+# Pyramis Developer Documentation
+
+Pyramis is designed keeping two goals in mind:
+
+<table><tr><th><strong>Abstractions must completely capture all aspects of multi-tier system specifications</strong></th></tr></table>
+
+The 3GPP specifications for 5G are used as a source to extract general-purpose networking
+constructs. These inform the choice of Pyramis Syntax. The working assumption is that a
+Domain-Specific Language that can specify the procedures listed in the 3GPP specification can
+specify a wide range of multi-tier system.
+
+<table><tr><th><strong>Pyramis workflow must be extensibile and reusable for a wide variety of multi-tier systems</strong></th></tr></table>
+
+At present, we have demonstrated support for variation in multitier-systems only at the level of
+differences in L-7 protocol. This is enabled by a general purpose header-file parser that generates
+a set of base types for the system. The working assumption is that a given set of base types
+(along with encoders and decoders) completely specify the L-7 protocol of any multi-tier system
+
+
 <details>
 <summary> <strong>🛠️ NF architecture under Pyramis</strong></summary>
   
