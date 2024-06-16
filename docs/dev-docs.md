@@ -283,7 +283,7 @@ generated IR is validated, it is used to directly emit C++ code based on certain
 rules.
 
 <details>
-<summary> <strong> Scopes and Type Inference </strong></summary>
+<summary> <strong> 📋 Scopes and Type Inference </strong></summary>
     
 Pyramis scopes are of three kinds: `MODULE, EVENT and BLOCK`, corresponding to module-level,
 `EVENT`-level and `IF/LOOP`-level. The `ModuleVisitor` drives the creation of new scopes, addition of
