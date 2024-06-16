@@ -80,5 +80,5 @@ Next, navigate to the root directory of your project and **run Pyramis commands 
 
 The Pyramis Compiler is developed to demonstrate that Pyramis is a complete and flexible language.
 
-- By showing that a path exists from Pyramis specification to a correct implementation, (in our case, via a compiler), we demonstrate the correctness of Pyramis as a specification language.
+- By showing that a path exists from Pyramis specification to a correct implementation, (in our case, via a compiler), we provide evidence for the correctness of Pyramis as a specification language.
 
