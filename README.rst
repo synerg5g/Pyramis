@@ -74,5 +74,11 @@ Next, navigate to the root directory of your project and **run Pyramis commands 
 💡 How Pyramis works
 ==================
 
+The Pyramis Compiler is developed to demonstrate that Pyramis is a complete and flexible language. The primary goal of the Pyramis compiler is to output multithreaded, C++
+code from a Pyramis specification, as a reference implementation. 
+
+- By showing that a path exists from Pyramis specification to a correct implementation, (in our case, via a compiler), we demonstrate the correctness of
+Pyramis as a specification language.
+
    Please read our `Pyramis Developer Reference <docs/dev-docs.md>`_ for a more detailed treatment.
 
