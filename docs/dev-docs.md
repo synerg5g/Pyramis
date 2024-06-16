@@ -167,7 +167,7 @@ Generate C++ files from IR
     
 Any reasonable networked system implementation defines and is dependent on its L-7 i.e.
 application layer protocol. For example, the internet communications occur over the HTTP L-7
-protocol, and 3GPP NF-NF communications are required to use either the NGAP or PFCP
+protocol, and certain 3GPP NF-NF communications are required to use either the NGAP or PFCP
 protocols.
 
 At its core, an NF protocol is specified by its <ins>state machine, message types, and encoder-decoder
