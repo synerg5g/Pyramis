@@ -73,4 +73,25 @@ Next, navigate to the root directory of your project and **run Pyramis commands 
 
 💡 How Pyramis works
 ==================
+
    Please read our `Pyramis Developer Reference <docs/dev-docs.md>`_ for a more detailed treatment.
+
+Pyramis is designed keeping two goals in mind:
+
++-------------------------------------------------------------------------------------------+
+|**Abstractions must completely capture all aspects of multi-tier system specifications**   |
++-------------------------------------------------------------------------------------------+
+The 3GPP specifications for 5G are used as a source to extract general-purpose networking
+constructs. These inform the choice of Pyramis Syntax. The working assumption is that a
+Domain-Specific Language that can specify the procedures listed in the 3GPP specification can
+specify a wide range of multi-tier system.
+
++------------------------------------------------------------------------------------------------+
+|**Pyramis workflow must be extensibile and reusable for a wide variety of multi-tier systems**  |
++------------------------------------------------------------------------------------------------+
+
+
+At present, we have demonstrated support for variation in multitier-systems only at the level of
+differences in L-7 protocol. This is enabled by a general purpose header-file parser that generates
+a set of base types for the system. The working assumption is that a given set of base types
+(along with encoders and decoders) completely specify the L-7 protocol of any multi-tier system
