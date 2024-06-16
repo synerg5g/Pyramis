@@ -56,6 +56,8 @@ implementation-specific constructs that enable this message demultiplexing.
 
 ## 🛠️ NF architecture under Pyramis</strong></summary>
     
+I describe the NF architecture using the 3GPP 5G AMF as an example node, without loss of generality.
+
 On successful translation of a Pyramis node specification, two key files are generated: <code>AMF_linking.cpp</code>
 and <code>AMF_platform.cpp</code>. These two files implement the processing-platform split.
   
