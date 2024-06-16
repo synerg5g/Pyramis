@@ -121,15 +121,6 @@ intermediate representation suitable for conversion to C++ code.
 
 <details>
 <summary> <strong> ⚒ Pyramis Compiler Driver</strong></summary>
-    
-Pyramis supports three kinds of commands:
-
-1. `pyramis translate NF`: Validate your Pyramis Specification, generate an error report if any irregularities detected.
-
-2. `pyramis build NF`: Generate an implementation from your Pyramis specification. A set of .cpp and .h files
-will be generated along with a base Makefile.
-
-4. `pyramis run NF num threads`: Run your generated NF implementation as a multithreaded process
 
 The compiler driver orchestrates the entire compilation process, right from parsing command-line
 options to generating C++ code. Its major functions are listed below.
