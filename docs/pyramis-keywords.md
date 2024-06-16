@@ -21,7 +21,7 @@ LOOKUP(__ident, __map_name, __key, __attribute)
 
 Retrieving and manipulating message fields (IEs) is a fundamental operation in all networked systems.
 
-Pyramis provides 5 keywords: `CREATE_MESSAGE`, `SET`, `APPEND`, `ENCODE`, `DECODE`
+Pyramis provides five keywords: `CREATE_MESSAGE`, `SET`, `APPEND`, `ENCODE`, `DECODE`
 
 ```Python
 # Create a message of type __type and assign it to identifier __ident
@@ -68,7 +68,7 @@ CONTINUE
 
 To specify fundamental networking operations
 
-Pyramis provides three actions: `GET_KEY`, `SET_KEY`, `SEND`
+Pyramis provides three keywords: `GET_KEY`, `SET_KEY`, `SEND`
 
 ```Python
 # Returns the procedure key of the ongoing procedure instance and
@@ -91,7 +91,7 @@ SEND(__message, __sending_interface, __peer_nf_name, __receiving_interface, [__c
 
 #### Special Actions
 
-Pyramis provides three actions: `UDF`, `CALL`, `MACRO` that perform specialised tasks.
+Pyramis provides three keywords: `UDF`, `CALL`, `MACRO` that perform specialised tasks.
 
 ```Python
 # Call the custom C++ function udf_name, with the appropriate expected arguments __args
