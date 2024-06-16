@@ -31,7 +31,7 @@ In the Pyramis workflow, three files are essential towards specifying your multi
 
 ### 📖 Requirements for compilation to executable NF
 
-Pyramis keywords can flexibly represent key aspects of most multi-tier systems. However, to compile to a working implementation, certain constraints have to be imposed on the inputs and outputs.
+Pyramis keywords can represent key aspects of most multi-tier systems. However, to compile to a working implementation, certain constraints have to be imposed on the inputs and outputs.
   
 <details>
 <summary> <strong>Well-Defined L-7 protocol library</strong></summary>
