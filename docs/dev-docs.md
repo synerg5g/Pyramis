@@ -226,7 +226,7 @@ class Type {
 
 Recall that python.Types are built to represent recursive C++ message-type structs, defined in
 the protocol header files. To give the compiler access to these structs, they are parsed to dicts
-during compiler initialisation via a custom C++ header file parser.
+during compiler initialisation via a <ins>custom C++ header file parser</ins> in `pyramis/pyramis/utils.py`
 
 The C++ header-file parser performs the crucial function of creating a set of base types for
 the NF being implemented. For every header file in the protocol header library, the parser
