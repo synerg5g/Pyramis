@@ -9,8 +9,11 @@ Pyramis defines <ins><strong>action</strong></ins> keywords that are used to spe
  Pyramis provides 2 keywords: `STORE` and `LOOKUP`
 
  ```Python
+# Store value __value at the attribute __attribute of the map struct at key __key of map __map_name
 STORE(__map_name, __key, __attribute, __value)
 
+# Retrieve the value of the attribute __attribute of the map struct at key __key of map __map_name
+# and assign it to identifier __ident
 LOOKUP(__ident, __map_name, __key, __attribute)
 ```
 
