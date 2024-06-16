@@ -66,9 +66,21 @@ a set of base types for the system. The working assumption is that a given set o
   on receipt of the incoming message data, but are defined in the processing file.
 </details>
 
+## 🛠️ Pyramis-to-C++ Compiler
+The Pyramis Compiler is developed to demonstrate that Pyramis is a complete and flexible language. The primary goal of the Pyramis compiler is to output multithreaded, C++
+code from a Pyramis specification, as a reference implementation. 
 
-<details>
-<summary> <strong>🛠️ Pyramis-to-C++ Compiler</strong></summary>
+- By showing that a path exists from Pyramis specification to a correct implementation, (in our case, via a compiler), we demonstrate the correctness of
+Pyramis as a specification language.
+
+The Pyramis Grammar is functionally a subset of the Python Grammar. This allows a major
+convenience during compilation to C++, i.e. The compiler does not require a custom lexer or a
+parser. Instead, after pre-processing a Pyramis file to generate an equivalent Python file, we can
+generate an AST intermediate representation using Python’s `ast.parse()`.
+
+Once the AST is created, the compiler recursively visits each node to further parse identifier
+information, create and delete scopes, updating symbol-tables and eventually generating an
+intermediate representation suitable for conversion to C++ code.
 
 
 
