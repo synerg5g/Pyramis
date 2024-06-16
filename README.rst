@@ -17,32 +17,60 @@ PyPI (Python)
 ⚡️ Quick start
 ===========
 
-   Please read our `Pyramis Keyword Reference <docs/pyramis-keywords.md>`_ for tips on writing Pyramis specifications
+#. **Install Pyramis**
 
-The recommended workflow is as follows:
+.. code-block:: bash
 
-+-----------------------------------------------+-----------------------------------------------------------------------------------------------------+
-| Task                                          | Action                                                                                              |
-+===============================================+=====================================================================================================+
-| Create Pyramis Specification                  || In a parent directory,                                                                             |                     
-|                                               ||  Fix names and interfaces of individual nodes, define ``interfaces.json``.                         |
-|                                               ||  For each node, use Pyramis keywords to define a processing file ``node_name.dsl``.                |         
-|                                               ||  UDFs, if any must be consolidated into a single ``udf.h``, ``udf.cpp`` pair.                      |
-+-----------------------------------------------+-----------------------------------------------------------------------------------------------------+
-| Analyze Pyramis Specification                 || To validate a pyramis specification of node *NF_A*, do:                                            |
-|                                               ||  ``$ pyramis translate NF_A``                                                                      |
-|                                               || The Pyramis Compiler will generate an error-report for any irregularities                          |
-+-----------------------------------------------+-----------------------------------------------------------------------------------------------------+
-| Build C++ Implementation                      || To generate a compilable C++ node implementation for *NF_A*, do:                                   |
-|                                               ||  ``$ pyramis build NF_A``                                                                          |
-|                                               || A set of .cpp and .h files will be generated along with a base Makefile.                           |
-+-----------------------------------------------+-----------------------------------------------------------------------------------------------------+
-| Run C++ NFs                                   || To run a translated node *NF_A* on *num_threads* threads, do:                                      |
-|                                               ||  ``$ pyramis run NF_A num_threads``                                                                |
-|                                               || Your NF specification has been converted to a running NF instance.                                 |
-+-----------------------------------------------+-----------------------------------------------------------------------------------------------------+
+   pip install git+https://github.com/armaanchowfin/pyramis.git
 
-💡 How Pyramis Works
+
+2. **Analyze, build and run the login-server NF**
+
+.. code-block:: bash
+
+   cd pyramis/examples/login-server/Server
+   pyramis translate NF_A
+   pyramis build NF_A
+   pyramis run NF_A 1
+
+3. **Run test client to verify** 
+
+.. code-block:: bash
+
+   cd pyramis/examples/login-server/Client
+   make
+   ./build/client
+
+
+
+🕹️ Using Pyramis
 =================
 
+First, **create your Pyramis specification**
+
+   Please read our `Pyramis Keyword Reference <docs/pyramis-keywords.md>`_ for tips on writing Pyramis specifications
+
+- Fix names and interfaces of individual nodes, define ``interfaces.json``.
+
+- For each node, use Pyramis keywords to define a processing file ``node_name.dsl``. 
+
+- UDFs, if any must be consolidated into a single ``udf.h``, ``udf.cpp`` pair. 
+
+- Custom protocol headers, if any, must be in `utils/`
+
+Next, navigate to the root directory of your project and **run Pyramis commands as necessary**
+
++-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+| Task                                          | Command Line                                                                                        | Result                                                                      |
++===============================================+=====================================================================================================+=============================================================================+
+| Validate Pyramis Specification                || ``$ pyramis translate NF_A``                                                                       || The Pyramis Compiler will generate an error-report for any irregularities  |
++-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+| Build C++ Implementation                      || ``$ pyramis build NF_A``                                                                           || A set of .cpp and .h files will be generated along with a base Makefile.   |
++-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+| Run C++ NFs                                   || ``$ pyramis run NF_A num_threads``                                                                 || Your NF specification is now a running NF instance                         |
++-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
+
+
+💡 How Pyramis works
+==================
    Please read our `Pyramis Developer Reference <docs/dev-docs.md>`_ for a more detailed treatment.
