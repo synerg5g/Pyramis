@@ -221,6 +221,23 @@ class Type {
         _contains ()
 }
 ```
+
+<ins>**Note on Creating python.Types**</ins>
+
+Recall that python.Types are built to represent recursive C++ message-type structs, defined in
+the protocol header files. To give the compiler access to these structs, they are parsed to dicts
+during compiler initialisation via a custom C++ header file parser.
+
+The C++ header-file parser performs the crucial function of creating a set of base types for
+the NF being implemented. For every header file in the protocol header library, the parser
+isolates struct definitions, serializes them into a `.json` file, and finally deserializes the `.json` file to
+a nested dictionary. **In essence, the C++ header-file parser takes a set of header files
+and extract each `struct/union/enum` definition encountered in the system.**
+
+The work of resolving inter-file struct dependencies, i.e. nested struct definitions takes place
+on demand via the `CREATE_MESSAGE` keyword during the AST Walk. This step uses the parsed
+structs to generate the appropriate recursive `python.Type` and assigns it to identifier specified.
+
 </details>
 
 
