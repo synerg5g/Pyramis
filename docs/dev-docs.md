@@ -185,6 +185,42 @@ associated with a set of base types that arise from its assumed L-7 protocol.
 
 <details>
 <summary> <strong> ⚒ The <code>python.Type</code> API</strong></summary>
+
+The Pyramis compiler must work extensively with message-types defined in the protocol library
+of the NF. Therefore, it implements a recursive python.Type data structure with an associated
+internal API to simplify certain operations. python.Type is designed to completely capture the
+recursive nature of nested struct definitions.
+
+```C++
+// class python . Type represents a recursive C ++ struct .
+class Type {
+    public :
+        ident; , // top - level name of the type
+        thing; , // array or simple type ?
+        indirection; , // count of pointer indirection
+        subs; // map of attributes of this type to their python.Types
+
+        // Defines rules for equivalent types and returns true
+        // if two equivalent types are compared .
+        equals ()
+        
+        // If a sub attribute is of type with thing thing , return the
+        // list of attributes encountered in the path to that sub attribute .
+        //
+        // This is useful if we want to confirm a path to a nested array .
+        path_to ()
+        
+        // If a type contains attr , return
+        // its type .
+        get_typeof ()
+
+    private :
+        // Returns True if a given nested asn type
+        // has a particular string as an attribute ,
+        // at any nesting level , else False .
+        _contains ()
+}
+```
 </details>
 
 
