@@ -195,10 +195,10 @@ recursive nature of nested struct definitions.
 // class python . Type represents a recursive C ++ struct .
 class Type {
     public :
-        ident; , // top - level name of the type
-        thing; , // array or simple type ?
-        indirection; , // count of pointer indirection
-        subs; // map of attributes of this type to their python.Types
+        ident ,       // top - level name of the type
+        thing ,       // array or simple type ?
+        indirection , // count of pointer indirection
+        subs          // map of attributes of this type to their python.Types
 
         // Defines rules for equivalent types and returns true
         // if two equivalent types are compared .
