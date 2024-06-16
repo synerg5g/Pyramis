@@ -62,14 +62,14 @@ Pyramis keywords can flexibly represent key aspects of most multi-tier systems. 
 
 The fundamental Pyramis abstraction is the `EVENT`. The Pyramis `EVENT` encapsulates processing actions that must occur on receipt of a message or on timer-expiry. 
 
-Each relevant EVENT must be defined in the processing file as a series of <ins><strong>action</strong></ins>s
-
 ```Python
 
 # Define the event __event_name and specify its formal arguments __args.
 EVENT(__event_name, [__args]*)
 ```
-Pyramis also defines <ins><strong>action</strong></ins> keywords that are used to specify various kinds of user-level message processing actions. They can be categorised into the following:
+Each relevant EVENT must be defined in the processing file as a series of <ins><strong>Action</strong></ins>s.
+
+- **Actions** are keywords that are used to specify various kinds of user-level message processing actions. They can be categorised into the following:
 
 #### State-Management Actions
 
