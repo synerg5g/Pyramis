@@ -1,9 +1,4 @@
-### 📖 Components of a Pyramis Specification
-<details>
-<summary> <strong>The <code>EVENT</code> Abstraction</strong></summary>
- The Pyramis <code>EVENT</code> encapsulates processing actions that must occur on receipt of a message or on timer-expiry. Each relevant <code>EVENT</code>s must be defined in the processing file.
-</details>
- 
+### 📖 Components of a Pyramis Specification 
 <details>
 <summary> <strong>Interface file</strong></summary>
   The <strong>interface file</strong> is a json file that describes the architecture of your multi-tier system in terms of individual nodes and their <ins>interface descriptions</ins>.
@@ -64,7 +59,17 @@ Pyramis keywords can flexibly represent key aspects of most multi-tier systems. 
 
 
 ### 📌 Pyramis Syntax
-Pyramis defines <ins><strong>action</strong></ins> keywords that are used to specify various kinds of user-level message processing actions. They can be categorised into the following:
+
+The fundamental Pyramis abstraction is the `EVENT`. The Pyramis `EVENT` encapsulates processing actions that must occur on receipt of a message or on timer-expiry. 
+
+Each relevant EVENT must be defined in the processing file as a series of <ins><strong>action</strong></ins>s
+
+```Python
+
+# Define the event __event_name and specify its formal arguments __args.
+EVENT(__event_name, [__args]*)
+```
+Pyramis also defines <ins><strong>action</strong></ins> keywords that are used to specify various kinds of user-level message processing actions. They can be categorised into the following:
 
 #### State-Management Actions
 
