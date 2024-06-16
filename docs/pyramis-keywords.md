@@ -29,12 +29,18 @@ Pyramis provides 5 keywords: `CREATE_MESSAGE`, `SET`, `APPEND`, `ENCODE`, `DECOD
 # and assign it to identifier __ident
 CREATE_MESSAGE(__ident, __type, [__size])
 
+# Assign the value of identifier __rhs to identifier __lhs
 SET(__lhs, __rhs)
 
+# Append a value __value to identifier __ident that contains or is equivalent to a sequence
 APPEND(__ident, __value)
 
-ENCODE(__encoder_name, __to_buffer, __message, __to_buffer_size)
+# Serialise message __message into the buffer __to_buffer of size __size using encoder __encoder_name
+# --- Encoder must be defined in the UDF File.
+ENCODE(__encoder_name, __to_buffer, __message, __size)
 
+# Deserialise message __message into buffer __from_buffer using decoder __decoder_name
+# --- Decoder must be defined in the UDF File 
 DECODE(__decoder_name, __from_buffer, __message)
 ```
 
