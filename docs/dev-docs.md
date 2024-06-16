@@ -82,6 +82,29 @@ Once the AST is created, the compiler recursively visits each node to further pa
 information, create and delete scopes, updating symbol-tables and eventually generating an
 intermediate representation suitable for conversion to C++ code.
 
+<details>
+<summary> <strong> ⚒ Pyramis Compiler Driver</strong></summary>
+</details>
+
+
+<details>
+<summary> <strong> ⚒ Types in Pyramis</strong></summary>
+</details>
+
+
+
+<details>
+<summary> <strong> ⚒ The <code>python.Type</code> API</strong></summary>
+</details>
+
+
+
+<details>
+<summary> <strong> ⚒ Type Assignment and Inference</strong></summary>
+</details>
+
+
+
 
 
 
