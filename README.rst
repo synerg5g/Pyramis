@@ -33,7 +33,7 @@ PyPI (Python)
    pyramis build NF_A
    pyramis run NF_A 1
 
-3. Run test client to verify 
+3. **Run test client to verify** 
 
 .. code-block:: bash
 
