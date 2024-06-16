@@ -1,7 +1,7 @@
 ### 📌 Pyramis Syntax
 Pyramis defines <ins><strong>action</strong></ins> keywords that are used to specify various kinds of user-level message processing actions. They can be broadly categorised as follows:
 <details>
-<summary> <strong>Context Actions</strong></summary>
+<summary> <strong>State-Management Actions</strong></summary>
  Pyramis supports the notion of contexts that store application state. Contexts are always persistent
  and are stored in <code>std::map<></code> as specified by the user.
  
@@ -19,7 +19,7 @@ Pyramis defines <ins><strong>action</strong></ins> keywords that are used to spe
 </details>
 
 <details>
-<summary> <strong>Logical Actions</strong></summary>
+<summary> <strong>Conterol-Flow Actions</strong></summary>
 </details>
 
 <details>
