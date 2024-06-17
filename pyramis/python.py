@@ -108,7 +108,49 @@ class Module(PyObject):
         Store lines in self.generated.
         Create the new <NF>_linking.h file in gx.output_dir
         '''
-        # do stuff
+        _guard = "#ifndef __" + self.gx.nf_name + "_LINKING_H__\n"
+        _guard += "#define __" + self.gx.nf_name + "_LINKING_H__\n"
+        self.generated.append(_guard)
+
+        _inc = ["\"../../udf.h\"", f"\"{self.gx.nf_name}_platform.h\""]
+        _includes = ""
+        for __inc in _inc:
+            _includes += "#include " + __inc + "\n"
+        _includes += "\n"
+        self.generated.append(_includes)
+
+        # args: given + defaults
+        _event_decl = ""
+        for event in self.events.values():
+            _name = event.name
+            _event_decl = "void " + _name + "("
+
+            _defaults = "int length, int sockfd, struct nfvInstanceData *nfvInst"
+            _user = ""
+            for v in event.vars:
+                _user += v.type_to_str() + " " + v.name + ", "
+        
+            _event_decl += (_user + _defaults) + ");\n"
+
+            self.generated.append(_event_decl)
+        
+        self.generated.append("\n")
+
+        _map_decl = "extern std::map<int, int> fd_to_key_map;\n"
+        _map_decl += "extern std::map<int, int> key_to_fd_map;\n\n"
+        self.generated.append(_map_decl)
+
+        _map_lock_decl = "extern pthread_mutex_t fd_to_key_map_lock;\n"
+        _map_lock_decl += "extern pthread_mutex_t key_to_fd_map_lock;\n"
+
+        _user_locks = ""
+        for map in self.gx.maps.values():
+            _user_locks += "extern pthread_mutex_t " + map.name + "_lock;\n"
+        _map_lock_decl += _user_locks
+
+        self.generated.append(_map_lock_decl)
+
+        self.generated.append("\n#endif")
 
         file = self.gx.output_dir / f"{self.gx.nf_name}_linking.h"
         self.write_to_file(file)
@@ -163,7 +205,7 @@ class Module(PyObject):
             _map = ""
             _attrs = ""
             for v in map.struct.vars.values():
-                _attrs += ("\t" + v.type.to_str() + " " + v.name + ";\n")
+                _attrs += ("\t" + v.type_to_str() + " " + v.name + ";\n")
 
             # get map struct definition
             _map += "typedef struct " + map.struct.name + " {\n"
@@ -253,6 +295,14 @@ class Variable:
         self.formal_arg = False
         self.type = type
         # assign self.type from somewhere.
+
+    def type_to_str(self):
+        if self.type.ident == "char" and self.type.thing == utils.TH_ARRAY:
+            if isinstance(self.parent, Event):
+                self.type.ident = "std::vector<char>&"
+            else:
+                self.type.ident = "std::string"
+        return self.type.ident
     
     def get_index(self):
         return self.arg_idx

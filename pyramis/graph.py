@@ -203,7 +203,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 ## print(f"Impossible: Event variables cannot have been encountered before the event itself.")
             
             event.vars.append(var)
-            self.events[event.name] = event
+            self.events[event.name] = event # event without actions
 
             infer.add_var_to_live_scope(self, var)  # scope.symtab[j] = var(j) etc.
         
@@ -214,6 +214,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
         # print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
         # exit scope
+        self.module.events[node.lineno] = event # event with actions
+
         infer.exit_live_scope(self)
             
     def visit_Call(self, node, parent=None):
