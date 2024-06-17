@@ -144,6 +144,9 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
 def get_variable(mv, arg_idx, ident, parent):
     # print(f"get_variable(): Attempting to get variable for {ident} in action {parent.name}")
     assert(isinstance(parent, python.Action) or isinstance(parent, python.Event))
+    if not ident:
+        return None
+    
     if ident == "true" or ident == "false":
         _type = python.Type("bool")
         return python.Variable(arg_idx, ident, parent, _type)

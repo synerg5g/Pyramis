@@ -119,6 +119,32 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
     #         #print(f"formals: {getmv().funcs[n.name].formals}")
 
     #     #print(f"{getmv().funcnodes}")
+
+    def validate_walk(self):
+        for event in self.events.values():
+            try:
+                print(f"Event {event.name}: vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
+            except:
+                print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
+                
+            for action in event.actions:
+                if isinstance(action, python.Action):
+                    print(f"Action: {action.name}")
+                    print(action.vars)
+                # else:
+                #     print(f"Non-action in event.actions: {event} :: {action}")
+                #     print(type(action))
+                # for var in action.vars:
+                #     if isinstance(var, python.Variable):
+                #         print(f'`{var.name}`: {var.type}')
+                #     else:
+                #         print(f"Non-var in action.vars: {action} -> {var}")
+                #         print(type(var))
+
+        # check if map structs are complete.
+        for map in self.gx.maps.values():
+            print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
+        print(self.live_scope.kind)
     
     def visit(self, node, *args):
         ast_utils.BaseNodeVisitor.visit(self, node, *args)
@@ -135,31 +161,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             self.visit(child, None)
         self.log.debug("Module AST walk complete.")
 
-        # self.validate_walk()
-        # for event in self.events.values():
-        #     try:
-        #         print(f"Event {event.name}: vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
-        #     except:
-        #         print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
-                
-        #     for action in event.actions:
-        #         if isinstance(action, python.Action):
-        #             print(f"Action: {action.name}")
-        #         else:
-        #             print(f"Non-action in event.actions: {event} :: {action}")
-        #             print(type(action))
-        #         for var in action.vars:
-        #             if isinstance(var, python.Variable):
-        #                 print(f'`{var.name}`: {var.type}')
-        #             else:
-        #                 print(f"Non-var in action.vars: {action} -> {var}")
-        #                 print(type(var))
-        
-        # # check if map structs are complete.
-        # for map in self.gx.maps.values():
-        #     print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
-        # print(self.live_scope.kind)
-                
+        self.validate_walk()
 
         # can begin a second ast walk from here,
         # XXX TODO
@@ -574,18 +576,26 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
     def visit_If(self, node, parent=None):
         print(f"Visiting {node}, parent = {parent}")
         infer.enter_new_scope(self, infer.Scope.BLOCK)
+
         action = python.Action(self.gx, "IF", parent, self)
 
-        # retrieve If args.
-        node_type = node.test.__class__
+        # create if utils.Conditions
+        # returns a list
+        _cond = node.test.value
+        print("condition: [%s]"%_cond)
 
-        if isinstance(node_type, ast.Compare):
-            # lhs, rhs
-            pass
-        elif isinstance(node_type, ast.Constant):
-            # single value
-            pass
+        conditions = utils.make_conditions(_cond)
+
+        for i, cond in enumerate(conditions):
+            if isinstance(cond, utils.Condition):
+                cond.lhs = infer.get_variable(self, i, cond.lhs, action)
+                cond.rhs = infer.get_variable(self, i, cond.rhs, action)
         
+        action.vars.extend(conditions)
+        print(len(action.vars))
+        
+        self.live_event.actions.append(action)
+
         for child in node.body:
             self.visit(child, node) # parent of all these children will be an ast.IF
         print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
