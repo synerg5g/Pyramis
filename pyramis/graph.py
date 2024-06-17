@@ -136,29 +136,29 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         self.log.debug("Module AST walk complete.")
 
         # self.validate_walk()
-        for event in self.events.values():
-            try:
-                print(f"Event {event.name}: vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
-            except:
-                print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
+        # for event in self.events.values():
+        #     try:
+        #         print(f"Event {event.name}: vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
+        #     except:
+        #         print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
                 
-            for action in event.actions:
-                if isinstance(action, python.Action):
-                    print(f"Action: {action.name}")
-                else:
-                    print(f"Non-action in event.actions: {event} :: {action}")
-                    print(type(action))
-                for var in action.vars:
-                    if isinstance(var, python.Variable):
-                        print(f'`{var.name}`: {var.type}')
-                    else:
-                        print(f"Non-var in action.vars: {action} -> {var}")
-                        print(type(var))
+        #     for action in event.actions:
+        #         if isinstance(action, python.Action):
+        #             print(f"Action: {action.name}")
+        #         else:
+        #             print(f"Non-action in event.actions: {event} :: {action}")
+        #             print(type(action))
+        #         for var in action.vars:
+        #             if isinstance(var, python.Variable):
+        #                 print(f'`{var.name}`: {var.type}')
+        #             else:
+        #                 print(f"Non-var in action.vars: {action} -> {var}")
+        #                 print(type(var))
         
-        # check if map structs are complete.
-        for map in self.gx.maps.values():
-            print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
-        print(self.live_scope.kind)
+        # # check if map structs are complete.
+        # for map in self.gx.maps.values():
+        #     print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
+        # print(self.live_scope.kind)
                 
 
         # can begin a second ast walk from here,
@@ -171,12 +171,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         if node.name in getmv().events:
             error.error("Redeclaration of event %s.\n" %node.name)
         else: 
-            print("New EVENT detected.")
+            # print("New EVENT detected.")
             event = python.Event(self.gx, node, parent)
             getmv().events[node.name] = event
         
         self.live_event = event
-        print("Old len: %s" %len(self.live_event.vars))
+        # print("Old len: %s" %len(self.live_event.vars))
         for i, _v in enumerate(self.live_event.formals):
             var = infer.get_variable(self, i, _v, self.live_event)
             if not var:
@@ -197,19 +197,19 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             else:
                 # create and return untyped variable
                 assert(not var.type)
-                #print(f"Impossible: Event variables cannot have been encountered before the event itself.")
+                ## print(f"Impossible: Event variables cannot have been encountered before the event itself.")
             
             event.vars.append(var)
             self.events[event.name] = event
 
             infer.add_var_to_live_scope(self, var)  # scope.symtab[j] = var(j) etc.
         
-        print("New len: %s"%len(self.live_event.vars))
+        # print("New len: %s"%len(self.live_event.vars))
         
         for body_node in node.body:
             self.visit(body_node, node) # parent of all the nodes being visited == ast.Functiondef
 
-        print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
+        # print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
         # exit scope
         infer.exit_live_scope(self)
             
@@ -222,11 +222,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         assert isinstance(node.func, ast.Name)
         # Create action
         action = python.Action(self.gx, node.func.id, parent, self)
-        print(f"Visiting {node}, action {action}, parent = {parent}, live event = {self.live_event}")
+        print(f"Visiting action {action.name}, parent = {parent}")
 
-        print(f"Now visiting args of {node} i.e. action {action}")
+        # print(f"Now visiting args of {node} i.e. action {action}")
         args = get_arg_nodes(node)
-        print(action.name)
+        # print(action.name)
         match action.name:
             case "CREATE_MESSAGE":
                 if len(args) == 2:
@@ -297,9 +297,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     ret_v.type = udf.ret_type
                 action.vars.append(ret_v)
 
-                print([v.value for v in args[2:]])
+                # print([v.value for v in args[2:]])
                 for i, _v in enumerate(args[2:]):
-                    print(i)
+                    # print(i)
                     vt = udf.arg_types[i] # the python.Type() is created by config rather than mv
                     var = infer.get_variable(self, i, _v.value, action)
                     if not var:
@@ -314,7 +314,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 untyped = []
                 typed = []
                 for i, _v in enumerate(args):
-                    print(f"Getting variable for {_v.value}")
+                    # print(f"Getting variable for {_v.value}")
                     var = infer.get_variable(self, i, _v.value, action)
 
                     if not var:
@@ -329,7 +329,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             assert(typed[0].type.equals(typed[1].type)) 
 
                     elif not var.type:
-                        print(f"Attempt to copy lhs type to rhs, {_v.value}")
+                        # print(f"Attempt to copy lhs type to rhs, {_v.value}")
                         untyped.append(var)
                         if len(typed) == 1:
                             var.type = typed[0].type
@@ -341,7 +341,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     action.vars.append(var)
                     infer.add_var_to_live_scope(self, var)
 
-            case "GET_KEY":
+            case "GET_KEY": # try get_procedure_key
                 '''
                 GET_KEY(<key_identifier>)
 
@@ -574,6 +574,17 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
     def visit_If(self, node, parent=None):
         print(f"Visiting {node}, parent = {parent}")
         infer.enter_new_scope(self, infer.Scope.BLOCK)
+        action = python.Action(self.gx, "IF", parent, self)
+
+        # retrieve If args.
+        node_type = node.test.__class__
+
+        if isinstance(node_type, ast.Compare):
+            # lhs, rhs
+            pass
+        elif isinstance(node_type, ast.Constant):
+            # single value
+            pass
         
         for child in node.body:
             self.visit(child, node) # parent of all these children will be an ast.IF

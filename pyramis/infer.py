@@ -45,7 +45,7 @@ def enter_new_scope(mv, scope_kind):
     else:
         error.error("Not a valid Scope kind", warning=True)
 
-    print(f"Created new live scope of kind {mv.live_scope.kind}")
+    # print(f"Created new live scope of kind {mv.live_scope.kind}")
 
     # copy parent variables
     if not (mv.live_scope.kind == Scope.MODULE):
@@ -60,25 +60,26 @@ def exit_live_scope(mv):
     Should call at the end of every node visit.
     '''
     mv.live_scope = mv.live_scope.encloser
-    print(f"Exiting scope, new live scope: {mv.live_scope.kind}")
+    # print(f"Exiting scope, new live scope: {mv.live_scope.kind}")
 
 def add_var_to_live_scope(mv, var):
     '''
     Relies on the fact that child scope inherits variables of its parent.
     '''
-    print(f"adding var to scope: {var}: {var.type}")
+    # print(f"adding var to scope: {var}: {var.type}")
     if var.name not in mv.live_scope.symtab:
         # first instance of the var in this scope
-        print(f"First instance of {var.name} in this scope, {mv.live_scope.kind}")
+        # print(f"First instance of {var.name} in this scope, {mv.live_scope.kind}")
         mv.live_scope.symtab[var.name] = var
     elif var.type and (not mv.live_scope.symtab[var.name].type):
         # definitely overwrite type
-        print(f"previously untyped variable is now typed, {var.name}: {var.type.ident}")
+        # print(f"previously untyped variable is now typed, {var.name}: {var.type.ident}")
         mv.live_scope.symtab[var.name].type = var.type
     else:
         # overwrite type?
-        print(f"WARNING: `{ mv.live_scope.symtab[var.name].name}`: { mv.live_scope.symtab[var.name].type} already exists in the current scope.")
-        print(f"Avoided overwrting with new value {var.name}: {var.type}")
+        # print(f"WARNING: `{ mv.live_scope.symtab[var.name].name}`: { mv.live_scope.symtab[var.name].type.ident} already exists in the current scope.")
+        # print(f"Avoided overwrting with new value {var.name}: {var.type.ident}")
+        pass
 
 C_TYPES = [
     "char",
@@ -118,23 +119,6 @@ def is_int(arg):
     true if arg str is an integer.
     '''
 
-# equivalent to the type cache.
-# 
-# def default_var(gx, arg_idx, name, parent, mv=None):
-#     '''
-#     Transform formals of a python.Function into 
-#     python.Variables, store in Function.vars
-#     '''
-#     if parent:
-#         mv = parent.mv
-
-#     var = python.Variable(name, parent)
-#     if parent:
-#         parent.vars[name] = var
-#     gx.allvars.add(var) # global set of variables encountered. Why not store-in-scope?
-
-#     return var
-
 # mv needs to call only when appropriate
 # eg STORE. dotted attrs must also be stored as is in the scope tree.
 
@@ -145,7 +129,7 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
     curr_scope = mv.live_scope
     while(curr_scope.kind != Scope.MODULE):
         if (ident in curr_scope.symtab):
-            print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
+            # print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
             return curr_scope.symtab[ident]
         else:
             # climb parent
@@ -158,7 +142,7 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
 # parent is the python.Action() that contains this variable
 # create the python.Action before get_variable.
 def get_variable(mv, arg_idx, ident, parent):
-    print(f"get_variable(): Attempting to get variable for {ident} in action {parent.name}")
+    # print(f"get_variable(): Attempting to get variable for {ident} in action {parent.name}")
     assert(isinstance(parent, python.Action) or isinstance(parent, python.Event))
     if ident == "true" or ident == "false":
         _type = python.Type("bool")
@@ -177,8 +161,8 @@ def get_variable(mv, arg_idx, ident, parent):
     stem = ident.split(".")[-1]
     root = ident.split(".")[0]
     dotted = (len(ident.split(".")) > 1)
-    print(ident)
-    print(f"Dotted: {dotted}")
+    # print(ident)
+    # print(f"Dotted: {dotted}")
 
     # search for exact (dotted or otherwise) name in scope.
     var = get_variable_from_scope(mv, arg_idx, parent, ident)
@@ -189,63 +173,24 @@ def get_variable(mv, arg_idx, ident, parent):
             # this is the first ever encounter - i.e. 
             # no python.Var() has ever been created in THIS scope.
             # return untyped variable
-            print(f"Created a new untyped python.Variable for {ident}")
+            # print(f"Created a new untyped python.Variable for {ident}")
             return python.Variable(arg_idx, ident, parent)
         else:
             # if dotted not found, search for type of root
-            print(f"Getting variable of root {root}")
+            # print(f"Getting variable of root {root}")
             var = get_variable_from_scope(mv, arg_idx, parent, root)
             if not var:
                 # accessing attributes of an unitialised variable.
                 error.error("`%s`: Attempt to access unitialised variable `%s`"%(parent.name, root))
             elif (var.type):
-                print(f"Type of root {root} is {var.type}")
+                # print(f"Type of root {root} is {var.type}")
                 final_t = var.type.get_typeof(stem)
-                print(f"Type of stem {stem} is {final_t}")
+                # print(f"Type of stem {stem} is {final_t}")
                 return python.Variable(arg_idx, ident, parent, final_t)
             else:
                 # invalid attribute access.
                 error.error(f"Invalid sub-attribute of {var.name}  was accessed.")
                 return None
-        
-# if not get_type(): 
-#   set_type()
-def set_type_of_ident(gx, arg, arg_t_str):
-    '''
-    CREATE_MESSAGE(m_name, m_type_str):
-    1. m_type = type_from_arg(m_type_str)
-    2. m_v = python.Variable(m_name, <parent>, m_type)
-    3. infer.add_to_scope(current, m_v)
-
-    CALL(eventx, arg1, arg2):
-    1. assert eventx in global events
-    2.  for each arg: 
-            # lookup scope, hopefully updated by some other action
-            # before CALL
-            arg_type = infer.get_type_of_ident(arg1) 
-            if arg_type:
-                arv_v = python.Variable(arg, <parent>, arg_type)
-            else:
-                print("type of arg not assigned before call, strange.)
-                arg_v = python.Variable(arg, <parent>)
-            # add to scope
-            infer.add_to_scope(current, arg_v)
-
-    3. if eventx in gx.events:
-        # the python.Variable will have been created already, 
-        # referenced by event
-        # get python.function. event args refer to the python.Variable
-        # in its scope. As long as a different event block can access a
-        # previous python.function, it can access the variable in 
-        # a different event scope.
-        event = gx.events[eventx]
-        for 
-        
-                
-
-
-    '''
-
     
 def test_valid_type(gx, arg):
     # check cache
@@ -260,10 +205,13 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
         # pick the one with most attributes
         struct = struct[-1] # temp
     assert(isinstance(struct, dict))
+
     if not isinstance(base_types, dict):
         print(type(base_types))
         # handle list with same type name.
+
     assert(isinstance(base_types, dict))
+
     if usage_indirection:
         final = python.Type(struct["__name__"], usage_indirection)  
     else:
@@ -290,7 +238,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             # enum type
             final.subs[attr_name] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
 
-    #print(struct)
+    ## print(struct)
     return final
 
 # call from CREATE MESSAGE, parse udfs
@@ -298,7 +246,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
 # base_types will be a dict of type_t: {...etc...}
 def type_from_type_str(gx, arg, usage_indirection=None):
     assert(isinstance(gx, config.GlobalInfo))
-    print(f"convert to python.Type: {arg}")
+    ## print(f"convert to python.Type: {arg}")
     if not arg:
         return python.Type("EOT") # end of tree
     

@@ -41,8 +41,8 @@ def do_struct(mini):
     with tag_name as a defined struct. Do reduce_to_type(tag_name)
     - typedef can also be used for type renaming accross multiple files.
     '''
-    #print(mini_s)
-    #print('\n')
+    ## print(mini_s)
+    ## print('\n')
     #lines = mini_s.split('\n')
     stack = []
     structs = []
@@ -748,7 +748,7 @@ class Preprocessor:
             else:
                 if args.count(")") > args.count("("):
                     args = args[:-1]
-                print(args)
+                #print(args)
                 transformed_string = f"{tabs * ' '}if{self.parse_condition(args)}:"
 
             return transformed_string

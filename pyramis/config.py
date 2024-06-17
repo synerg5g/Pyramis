@@ -69,7 +69,7 @@ class GlobalInfo:
         self.decoders = {}
         self.pyramis_base_types = None
         self.user_base_types = None
-        self.intefaces = {}
+        self.interfaces = {}
         self.peer_interfaces = {}
 
         # codegen
@@ -162,7 +162,6 @@ class GlobalInfo:
             assert(isinstance(interfaces, dict))
 
             for node in interfaces:
-                print(node)
                 _interfaces = interfaces[node]["Interfaces"] # list of interfaces
                 if node == self.nf_name:
                     # own node
@@ -172,6 +171,8 @@ class GlobalInfo:
                     # peer_node
                     self.peer_interfaces[node] = utils.Interface(_interface)
 
+        # node never == nf_name
+        if not self.interfaces:
             error.error("Node name mismatch (cmdline and interfaces.json). Please fix")
 
     def parse_udfs(self):
@@ -208,7 +209,7 @@ class GlobalInfo:
                     _ret = line.split("(")[0].split()
                     _func = _ret[-1] # name of the func
                     _ret_type = " ".join(e for e in _ret[:-1])
-                    print(f"parse udf {_func}")
+                    #print(f"parse udf {_func}")
 
                     _ptr = 0
                     if "*" in _ret_type or "*" in _func:
@@ -227,7 +228,6 @@ class GlobalInfo:
                     # same location.
                     # specific instance is assigning a THING to a generic type.
                     ret_type = infer.type_from_type_str(self, _ret_type, _ptr)
-                    #ret_type = python.Type(_ret_type, indirection=_ptr)
                     
                     udf = python.UserDefined(_func, ret_type)
 
@@ -262,9 +262,9 @@ class GlobalInfo:
                         decoder = False
                     self.udfs[udf.name] = udf
 
-        print(f"Parsed {len(self.udfs)} udfs.")
-        print(f"Encoders: {self.encoders}")
-        print(f"Decoders: {self.decoders}")
+        # print(f"Parsed {len(self.udfs)} udfs.")
+        # print(f"Encoders: {self.encoders}")
+        # print(f"Decoders: {self.decoders}")
 
 
     def generate_builtins(self):

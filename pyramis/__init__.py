@@ -66,8 +66,8 @@ class Pyramis:
         #     gx.silent = True
         #     self.log.setLevel(logging.WARNING)
 
-        self.log.debug(gx.nf_dsl)
-        self.log.debug(gx.output_dir)
+        # self.log.debug(gx.nf_dsl)
+        # self.log.debug(gx.output_dir)
         return gx
 
     @classmethod
