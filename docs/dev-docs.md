@@ -128,7 +128,7 @@ The compiler driver orchestrates the entire compilation process, right from pars
 options to generating C++ code. Its major functions are listed below.
 
 ```
-Initialisation
+Initialisation: __init__.py
 ---------------
 1. Parse command-line, set global compiler configurations.
 2. Parse C++ protocol headers, UDF File and Interface File.
@@ -137,7 +137,7 @@ Initialisation
 ```
 
 ```
-AST Walk
+AST Walk: graph.py
 --------
 Recursively visit each node
 1. Maintain scopes and update symbol tables
@@ -147,7 +147,7 @@ python.Maps.
 4. Report semantic errors
 ```
 ```
-Code Generation
+Code Generation: python.py
 ---------------
 Generate C++ files from IR
 1. Remove redundant Map accesses.
