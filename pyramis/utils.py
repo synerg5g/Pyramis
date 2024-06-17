@@ -634,6 +634,18 @@ class Condition:
     
     def __str__(self):
         return f"{self.value}:: [{self.lhs}] [{self.op}] [{self.rhs}]"
+    
+    def type_check(self):
+        print(f"typecheccking IF {self.value}")
+        assert (isinstance(self.lhs, python.Variable))
+        assert(isinstance(self.rhs, python.Variable))
+        print(self.lhs.type)
+        print(self.rhs.type)
+
+        if self.lhs.type.equals(self.rhs.type):
+            return True
+        else:
+            print(f"WARNING:: IF condition type-mismatch: {self.lhs.type.ident}, {self.rhs.type.ident}")
 
 _comp_ops = [
     '==',

@@ -161,7 +161,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             self.visit(child, None)
         self.log.debug("Module AST walk complete.")
 
-        self.validate_walk()
+        #self.validate_walk()
 
         # can begin a second ast walk from here,
         # XXX TODO
@@ -572,6 +572,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         
     def visit_For(self, node, parent=None):
         self.log.debug(f"In FOR") # all str, maybe some int
+        
+
+        for child in node.body:
+            self.visit(child, node)
+
 
     def visit_If(self, node, parent=None):
         print(f"Visiting {node}, parent = {parent}")
@@ -590,6 +595,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             if isinstance(cond, utils.Condition):
                 cond.lhs = infer.get_variable(self, i, cond.lhs, action)
                 cond.rhs = infer.get_variable(self, i, cond.rhs, action)
+                #cond.type_check()
         
         action.vars.extend(conditions)
         print(len(action.vars))

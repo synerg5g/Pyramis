@@ -263,6 +263,8 @@ class Type:
         elif ((self.ident == "int" or self.ident == "uint8_t" or self.ident == "size_t") and
             (other_type.ident == "int" or other_type.ident == "uint8_t" or other_type.ident == "size_t")):
             return True
+        else:
+            return False
 
     def path_to(self, thing):
         '''
