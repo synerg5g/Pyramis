@@ -2,7 +2,8 @@
 
 #. **Specify** the nodes of your multi-tier system.
 #. **Analyze** each node specification to ensure validity under Pyramis rules.
-#. **Translate** each node specification to a C++ implementation.
+#. **Translate** each node specification to a C++ Network Function (NF) implementation.
+#. **Run** each NF implementation as a multithreaded process.
 
 ⚙️ Installation
 ============
@@ -70,7 +71,14 @@ Next, navigate to the root directory of your project and **run Pyramis commands 
 | Run C++ NFs                                   || ``$ pyramis run NF_A num_threads``                                                                 || Your NF specification is now a running NF instance                         |
 +-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 
+   Run ``pyramis --help`` for the list of supported Pyramis commands
 
 💡 How Pyramis works
 ==================
+
    Please read our `Pyramis Developer Reference <docs/dev-docs.md>`_ for a more detailed treatment.
+
+The Pyramis Compiler is developed to demonstrate that Pyramis is a complete and flexible language.
+
+- By showing that a path exists from Pyramis specification to a correct implementation, (in our case, via a compiler), we provide evidence for the correctness of Pyramis as a specification language.
+
