@@ -45,7 +45,7 @@ def enter_new_scope(mv, scope_kind):
     else:
         error.error("Not a valid Scope kind", warning=True)
 
-    # print(f"Created new live scope of kind {mv.live_scope.kind}")
+    print(f"Created new live scope of kind {mv.live_scope.kind}")
 
     # copy parent variables
     if not (mv.live_scope.kind == Scope.MODULE):
@@ -60,7 +60,7 @@ def exit_live_scope(mv):
     Should call at the end of every node visit.
     '''
     mv.live_scope = mv.live_scope.encloser
-    # print(f"Exiting scope, new live scope: {mv.live_scope.kind}")
+    print(f"Exiting scope, new live scope: {mv.live_scope.kind}")
 
 def add_var_to_live_scope(mv, var):
     '''
