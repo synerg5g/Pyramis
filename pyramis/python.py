@@ -94,7 +94,6 @@ class Module(PyObject):
         self.node = node 
 
         self.events = collections.OrderedDict() # store events by line-no.
-        self.maps = {} # used to generate contexts.h
 
         self.generated = [] # store converted text from events.
 
@@ -137,16 +136,58 @@ class Module(PyObject):
         - default system includes
         - header guards
         '''
-        # do stuff
+        # preamble
+        _desc = """/**
+* FILE: contexts.h
+* -----------------
+* Generated after an analysis of the processing .dsl file.
+* Contains declarations and definitions of collections
+* referenced in the code.
+*/\n"""
+        self.generated.append(_desc)
 
+        _guard = "#ifndef __" + self.gx.nf_name + "_CONTEXTS_H__\n"
+        _guard += "#define __" + self.gx.nf_name + "_CONTEXTS_H__\n"
+        self.generated.append(_guard)
 
+        _inc = ["<vector>", "<map>", "<string>"]
+        _includes = ""
+        for __inc in _inc:
+            _includes += "#include " + __inc + "\n"
+        _includes += "\n"
+        self.generated.append(_includes)
+
+        # do stuff, fill self.generated.
+        print(len(self.gx.maps))
+        for map in self.gx.maps.values():
+            _map = ""
+            _attrs = ""
+            for v in map.struct.vars.values():
+                _attrs += ("\t" + v.type.to_str() + " " + v.name + ";\n")
+
+            # get map struct definition
+            _map += "typedef struct " + map.struct.name + " {\n"
+            _map += _attrs
+
+            _map += "} " + map.struct.name + "_t;\n\n"
+
+            assert(map.key_type)
+
+            # declare map with key type and map struct
+            _map += "std::map<" + map.key_type.to_str() + ", " + map.struct.name + "_t> " + map.name + " {};\n\n"
+            self.generated.append(_map)
+        
+        self.generated.append("#endif")
+            
         file = self.gx.output_dir / f"{self.gx.nf_name}_contexts.h"
         self.write_to_file(file)
 
     def write_to_file(self, filepath):
         '''Called by the generate_* methods at end.'''
         # do stuff
-
+        with open(filepath, mode="w") as f_w:
+            for thing in self.generated:
+                f_w.write(thing)
 
         # reset module.generated
         self.generated = []
@@ -225,7 +266,7 @@ class Variable:
 
     def __repr__(self):
         if self.parent:
-            return repr((self.parent, self.name))
+            return repr((type(self), self.name, self.parent))
         return self.name
     
 class Map:
@@ -254,6 +295,11 @@ class Type:
         self.subs = {} # attr:Type
         self.thing = thing  
         self.indirection = indirection # use during translate()
+
+    def to_str(self):
+        if self.ident == "char" and self.thing == utils.TH_ARRAY:
+            self.ident = "std::string"
+        return self.ident
     
     def equals(self, other_type):
         assert(isinstance(other_type, Type))

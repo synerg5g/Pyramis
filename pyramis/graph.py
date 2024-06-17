@@ -131,20 +131,20 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 if isinstance(action, python.Action):
                     print(f"Action: {action.name}")
                     print(action.vars)
-                # else:
-                #     print(f"Non-action in event.actions: {event} :: {action}")
-                #     print(type(action))
-                # for var in action.vars:
-                #     if isinstance(var, python.Variable):
-                #         print(f'`{var.name}`: {var.type}')
-                #     else:
-                #         print(f"Non-var in action.vars: {action} -> {var}")
-                #         print(type(var))
+                else:
+                    print(f"Non-action in event.actions: {event} :: {action}")
+                    print(type(action))
+                for var in action.vars:
+                    if isinstance(var, python.Variable):
+                        print(f'`{var.name}`: {var.type}')
+                    else:
+                        print(f"Non-var in action.vars: {action} -> {var}")
+                        print(type(var))
 
         # check if map structs are complete.
         for map in self.gx.maps.values():
             print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
-        print(self.live_scope.kind)
+            print(f"key type: {map.key_type.ident}, {map.key_type.thing}")
     
     def visit(self, node, *args):
         ast_utils.BaseNodeVisitor.visit(self, node, *args)
@@ -161,7 +161,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             self.visit(child, None)
         self.log.debug("Module AST walk complete.")
 
-        #self.validate_walk()
+        self.validate_walk()
+        print(self.live_scope.kind)
 
         # can begin a second ast walk from here,
         # XXX TODO
@@ -562,7 +563,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             case "TIMER_START":
                 pass
 
-        # add action to live event
+        # add action to live event, 
+        # no scope exit required.
         self.live_event.actions.append(action)
     
     def visit_Constant(self, node, parent=None, idx=None):
@@ -572,10 +574,30 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         
     def visit_For(self, node, parent=None):
         self.log.debug(f"In FOR") # all str, maybe some int
-        
+        infer.enter_new_scope(self, infer.Scope.BLOCK)
+
+        action = python.Action(self.gx, "FOR", parent, self)
+
+        # it
+        itr = infer.get_variable(self, 0, node.target.id, action)
+        if not itr.type:
+            itr.type = infer.type_from_type_str(self.gx, "int")
+        action.vars.append(itr)
+        infer.add_var_to_live_scope(self, itr)
+
+        # all loops are range-based
+        # var[1] is lower, var[2] is upper.
+        for i, _v in enumerate(node.iter.args):
+            var = infer.get_variable(self, i, _v.value, action)
+            action.vars.append(var)
+            infer.add_var_to_live_scope(self, var)
+
+        self.live_event.actions.append(action)
 
         for child in node.body:
             self.visit(child, node)
+        
+        infer.exit_live_scope(self)
 
 
     def visit_If(self, node, parent=None):
@@ -607,6 +629,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
 
         for child in node.orelse:
+            # create a basic ELSE ction
+            action_ = python.Action(self.gx, "ELSE", action, self)
+            self.live_event.actions.append(action)
             self.visit(child, node)
         
         infer.exit_live_scope(self)

@@ -161,6 +161,9 @@ class Pyramis:
     
     def do_raw_translate(self):
         self.log.debug("TODO: translate()")
+    
+        # contexts
+        self.gx.py_module.generate_contexts()
 
         # linking.h
         self.gx.py_module.generate_linking_h()
@@ -168,8 +171,6 @@ class Pyramis:
         # linking.cpp
         self.gx.py_module.generate_linking_cpp()
 
-        # contexts
-        self.gx.py_module.generate_contexts()
 
     def do_build(self):
         # create platform file
