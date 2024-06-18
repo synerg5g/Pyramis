@@ -229,6 +229,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # Create action
         action = python.Action(self.gx, node.func.id, parent, _indent, self)
         print(f"Visiting action {action.name}, parent = {parent}")
+        print(f"action indent: {_indent}")
 
         # print(f"Now visiting args of {node} i.e. action {action}")
         args = get_arg_nodes(node)
@@ -608,7 +609,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
         action = python.Action(self.gx, "IF", parent, indent, self)
-
+        print(f"IF indent: {indent}")
         # create if utils.Conditions
         # returns a list
         _cond = node.test.value
@@ -628,12 +629,13 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         self.live_event.actions.append(action)
 
         for child in node.body:
-            self.visit(child, node) # parent of all these children will be an ast.IF
+            self.visit(child, node, indent) # parent of all these children will be an ast.IF
         print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
 
         for child in node.orelse:
             indent -= 1
             # create a basic ELSE ction
+            print(f"ELSE ident: {indent}")
             action_ = python.Action(self.gx, "ELSE", action, indent, self)
             self.live_event.actions.append(action_)
             indent += 1

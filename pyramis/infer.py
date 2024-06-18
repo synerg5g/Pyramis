@@ -2,6 +2,7 @@ from . import python
 from . import config
 from . import error
 from . import utils
+import copy
 
 class Scope:
     '''
@@ -37,7 +38,7 @@ def enter_new_scope(mv, scope_kind):
         new_scope = Scope(Scope.EVENT)
         new_scope.encloser = mv.live_scope
         mv.live_scope = new_scope
-        indent = mv.indent + 1
+        mv.indent+= + 1
     
     elif scope_kind == Scope.BLOCK:
         # Enter new BLOCK scope
@@ -45,11 +46,13 @@ def enter_new_scope(mv, scope_kind):
         new_scope = Scope(Scope.BLOCK)
         new_scope.encloser = mv.live_scope
         mv.live_scope = new_scope
-        indent = mv.indent + 1
+        mv.indent += 1
     else:
         error.error("Not a valid Scope kind", warning=True)
 
     print(f"Created new live scope of kind {mv.live_scope.kind}")
+
+    indent = copy.deepcopy(mv.indent)
 
     # copy parent variables
     if not (mv.live_scope.kind == Scope.MODULE):
