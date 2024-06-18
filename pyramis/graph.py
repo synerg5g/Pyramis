@@ -262,6 +262,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 decoder_name = args[0].value
                 decoder = self.gx.get_decoder(decoder_name)
                 assert(isinstance(decoder, python.UserDefined))
+                action.vars.append(decoder_name)
 
                 # assign types based on arg placement
                 for i, _v in enumerate(args[1:]):
@@ -272,6 +273,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         var = python.Variable(i, _v.value, action, vt)
                     else:
                         var.type = vt
+                        
+                    var.name = _v.value
                     action.vars.append(var)
                     infer.add_var_to_live_scope(self, var)
 
@@ -282,6 +285,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 encoder_name = args[0].value
                 encoder = self.gx.get_encoder(encoder_name)
                 assert(isinstance(encoder, python.UserDefined))
+                action.vars.append(encoder_name)
 
                 for i, _v in enumerate(args[1:]):
                     vt = encoder.arg_types[i]
@@ -291,6 +295,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         var = python.Variable(i, _v.value, action, vt)
                     else:
                         var.type = vt
+                    
+                    var.name = _v.value
+                    print(var.name)
                     action.vars.append(var)
                     infer.add_var_to_live_scope(self, var)
 
@@ -314,6 +321,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         var = python.Variable(i, _v.value, action, vt)
                     else:
                         var.type = vt
+
+                    var.name = _v.value
                     action.vars.append(var)
                     infer.add_var_to_live_scope(self, var)
             

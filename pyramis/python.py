@@ -125,7 +125,11 @@ class Module(PyObject):
             _name = event.name
             _event_decl = "void " + _name + "("
 
-            _defaults = "int length, int sockfd, struct nfvInstanceData *nfvInst"
+            if any(action.name == "DECODE" for action in event.actions):
+                _defaults = "int length, int sockfd, struct nfvInstanceData *nfvInst"
+            else:
+                _defaults = "int sockfd, struct nfvInstanceData *nfvInst"
+
             _user = ""
             for v in event.vars:
                 _user += v.type_to_str() + " " + v.name + ", "
@@ -307,10 +311,45 @@ class Action:
             self.generated += _type.to_str() + " " + _id + "[" + _sz + "];"
         
     def emit_decode(self):
-        pass
+        # arg[1] is the deserialised ident.
+        _body_id = self.vars[1].name
+        _type = self.vars[1].type
+        self.generated += _type.to_str() + " " + _body_id + " {};\n"
+
+        _fn = self.vars[0] # str
+        self.generated += (self.indent *"\t" + _fn + "(")
+
+        _args = ""
+        for _arg in self.vars[1:]:
+            _id = _arg.name
+            _args += _id + ", "
+        _args += "length"
+
+        self.generated += _args + ");\n"                
 
     def emit_encode(self):
-        pass
+        # decl size and buffer.
+        # size_t simple_enc_sz {};
+        # std::vector<char> simple_enc(MAX_MESSAGE_SIZE, 0);
+        # SynerPMessageEncode(simple, simple_enc, simple_enc_sz); // null added.
+        print([var.name for var in self.vars[1:]])
+        _sz = self.vars[-1]
+        self.generated += _sz.type.to_str() + " " + _sz.name + " {};\n"
+
+        _buf = self.vars[1]
+        self.generated += self.indent* "\t" + _buf.type_to_str() + " " + _buf.name + "(MAX_MESSAGE_SIZE, 0);\n"
+
+        _fn = self.vars[0] # str
+        self.generated += (self.indent *"\t" + _fn + "(")
+
+        _args = ""
+        for _arg in self.vars[1:]:
+            _id = _arg.name
+            _args += _id + ", "
+        _args = _args[:-2]
+
+        self.generated += _args + ");\n"
+        
 
     def emit_udf(self):
         pass
@@ -381,6 +420,8 @@ class Variable:
         if self.type.ident == "char" and self.type.thing == utils.TH_ARRAY:
             if isinstance(self.parent, Event):
                 self.type.ident = "std::vector<char>&"
+            elif isinstance(self.parent, Action) and self.parent.name == "ENCODE":
+                self.type.ident = "std::vector<char>"
             else:
                 self.type.ident = "std::string"
         return self.type.ident
