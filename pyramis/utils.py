@@ -732,8 +732,8 @@ PYRAMIS_ACTIONS = [
     "PASS" ,       # XXX dubious
     "BREAK",       # XXX dubious
     "CONTINUE" ,    # XXX dubious
-    "TIMER_STOP",
-    "TIMER_START"
+    #"TIMER_STOP",
+    #"TIMER_START"
 ]
 
 class Preprocessor:

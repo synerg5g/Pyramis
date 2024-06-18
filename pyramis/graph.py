@@ -66,6 +66,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
         self.root_scope = infer.Scope(infer.Scope.MODULE) # head
         self.live_scope = None # updated by enter_scope, exit_scope
+        self.indent = None
         
         self.configure_logging()
 
@@ -154,7 +155,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         #self.forward_references(node)
 
         # enter module scope
-        infer.enter_new_scope(self, infer.Scope.MODULE)
+        _, indent = infer.enter_new_scope(self, infer.Scope.MODULE)
 
         # continue regular ast walk
         for child in node.body:
@@ -169,7 +170,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
     
     def visit_FunctionDef(self, node, parent=None):
         print(f"Visiting {type(node)} i.e. EVENT {node.name}")
-        infer.enter_new_scope(self, infer.Scope.EVENT)
+        _, indent = infer.enter_new_scope(self, infer.Scope.EVENT)
 
         if node.name in getmv().events:
             error.error("Redeclaration of event %s.\n" %node.name)
@@ -210,7 +211,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # print("New len: %s"%len(self.live_event.vars))
         
         for body_node in node.body:
-            self.visit(body_node, node) # parent of all the nodes being visited == ast.Functiondef
+            self.visit(body_node, node, indent) # parent of all the nodes being visited == ast.Functiondef
 
         # print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
         # exit scope
@@ -218,7 +219,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
         infer.exit_live_scope(self)
             
-    def visit_Call(self, node, parent=None):
+    def visit_Call(self, node, parent=None, _indent=None):
         '''
         '''
         # func is of type python.Event() 
@@ -226,7 +227,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # node.func.id are the pyramis action
         assert isinstance(node.func, ast.Name)
         # Create action
-        action = python.Action(self.gx, node.func.id, parent, self)
+        action = python.Action(self.gx, node.func.id, parent, _indent, self)
         print(f"Visiting action {action.name}, parent = {parent}")
 
         # print(f"Now visiting args of {node} i.e. action {action}")
@@ -574,11 +575,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         #print(f"Arg: {node.value}\nType: {type(node.value)}")
         self.log.debug(f"do arg {idx} i.e. {node} of {parent}")
         
-    def visit_For(self, node, parent=None):
-        self.log.debug(f"In FOR") # all str, maybe some int
-        infer.enter_new_scope(self, infer.Scope.BLOCK)
+    def visit_For(self, node, parent=None, _indent=None):
+        self.log.debug(f"In LOOP") # all str, maybe some int
+        _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
-        action = python.Action(self.gx, "FOR", parent, self)
+        action = python.Action(self.gx, "LOOP", parent, indent, self)
 
         # it
         itr = infer.get_variable(self, 0, node.target.id, action)
@@ -602,11 +603,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         infer.exit_live_scope(self)
 
 
-    def visit_If(self, node, parent=None):
+    def visit_If(self, node, parent=None, _indent=None):
         print(f"Visiting {node}, parent = {parent}")
-        infer.enter_new_scope(self, infer.Scope.BLOCK)
+        _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
-        action = python.Action(self.gx, "IF", parent, self)
+        action = python.Action(self.gx, "IF", parent, indent, self)
 
         # create if utils.Conditions
         # returns a list
@@ -631,10 +632,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
 
         for child in node.orelse:
+            indent -= 1
             # create a basic ELSE ction
-            action_ = python.Action(self.gx, "ELSE", action, self)
-            self.live_event.actions.append(action)
-            self.visit(child, node)
+            action_ = python.Action(self.gx, "ELSE", action, indent, self)
+            self.live_event.actions.append(action_)
+            indent += 1
+            self.visit(child, node, indent)
         
         infer.exit_live_scope(self)
         

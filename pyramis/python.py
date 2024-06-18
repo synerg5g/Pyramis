@@ -130,9 +130,10 @@ class Module(PyObject):
             for v in event.vars:
                 _user += v.type_to_str() + " " + v.name + ", "
         
-            _event_decl += (_user + _defaults) + ");\n"
+            _event_decl += (_user + _defaults) + ")"
+            event.decl += _event_decl # assign to event.
 
-            self.generated.append(_event_decl)
+            self.generated.append(_event_decl + ";\n")
         
         self.generated.append("\n")
 
@@ -163,10 +164,12 @@ class Module(PyObject):
         Store lines in self.generated.
         Create the new <NF>_linking.cpp file in gx.output_dir
         '''
-        for event in self.events:
+        for event in self.events.values():
             event.emit()
-            self.generated.append(event.generated)
-        
+            self.generated.extend(event.generated) # contains all event text.
+            self.generated += "\n\n"
+
+
         file = self.gx.output_dir / f"{self.gx.nf_name}_linking.cpp"
         self.write_to_file(file)
         
@@ -246,22 +249,38 @@ class Event:
         self.actions = [] # 
 
         self.generated = [] # emit appends string lines.
+        self.decl = "" # declaration/ header
+        self.indent = 0
 
 
     def emit(self):
+        # get function header
+        _event_decl = self.decl
+        self.generated.append(_event_decl + " {\n")
+
         # update self.generated.
         for action in self.actions:
+            print(f"Indent: {action.indent}")
+            try:
+                self.generated.append(action.indent * "\t")
+            except:
+                pass
             action.emit()
+            self.generated.append(action.generated + "\n")
+        
+        self.generated.append("}")
 
 class Action:
     pyramis_actions = utils.PYRAMIS_ACTIONS
 
-    def __init__(self, gx, name, parent=None, mv=None):
+    def __init__(self, gx, name, parent=None, indent=None, mv=None):
         self.gx = gx
         self.name = name
         self.parent = parent
         self.mv = mv
         self.vars = [] # references to python.Var(), stored in the enclosing scope.
+
+        self.indent = indent # update via modulevisitor.
         self.generated = ""
 
     def emit(self):
@@ -269,16 +288,78 @@ class Action:
         C++ code generation, unique per action.
         '''
         emitters = {
-            action: getattr(self, f"emit_{action.lower()}") for action in Action.pyramis_actions
+            action.lower(): getattr(self, f"emit_{action.lower()}") for action in Action.pyramis_actions
         }
-        
-        if self.name in emitters:
-            return emitters[self.name]
+        print(self.name.lower())
+        if self.name.lower() in emitters:
+            emitters[self.name.lower()]()
         else:
             error.error(f"Action {self.name} not supported yet.")
 
-    def emit_assert(self):
+    def emit_create_message(self):
+        _type = self.vars[0].type
+        _id = self.vars[0].name
+
+        if not self.vars[0].type.sz:
+            self.generated += _type.to_str() + " " + _id + " {};"
+        else:
+            _sz = self.vars[0].type.sz
+            self.generated += _type.to_str() + " " + _id + "[" + _sz + "];"
+        
+    def emit_decode(self):
         pass
+
+    def emit_encode(self):
+        pass
+
+    def emit_udf(self):
+        pass
+
+    def emit_set(self):
+        pass
+
+    def emit_get_key(self):
+        pass
+
+    def emit_set_key(self):
+        pass
+
+    def emit_append(self):
+        pass
+
+    def emit_call(self):
+        pass
+
+    def emit_store(self):
+        pass
+
+    def emit_lookup(self):
+        pass
+
+    def emit_send(self):
+        pass
+
+    def emit_loop(self):
+        pass
+
+    def emit_if(self):
+        pass
+
+    def emit_else(self):
+        pass
+
+    def emit_read_config(self):
+        pass
+
+    def emit_break(self):
+        pass
+
+    def emit_continue(self):
+        pass
+
+    def emit_pass(self):
+        pass
+
 
 class UserDefined:
     def __init__(self, name, ret_type):
@@ -345,6 +426,7 @@ class Type:
         self.subs = {} # attr:Type
         self.thing = thing  
         self.indirection = indirection # use during translate()
+        self.sz = None
 
     def to_str(self):
         if self.ident == "char" and self.thing == utils.TH_ARRAY:

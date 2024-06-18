@@ -28,6 +28,8 @@ def enter_new_scope(mv, scope_kind):
         # Entering a new module, i.e. set root scope
         mv.root_scope = Scope(Scope.MODULE) # must never change
         mv.live_scope = mv.root_scope
+        mv.indent = 0
+        indent = 0
 
     elif scope_kind == Scope.EVENT:
         # Entering a new event.
@@ -35,6 +37,7 @@ def enter_new_scope(mv, scope_kind):
         new_scope = Scope(Scope.EVENT)
         new_scope.encloser = mv.live_scope
         mv.live_scope = new_scope
+        indent = mv.indent + 1
     
     elif scope_kind == Scope.BLOCK:
         # Enter new BLOCK scope
@@ -42,6 +45,7 @@ def enter_new_scope(mv, scope_kind):
         new_scope = Scope(Scope.BLOCK)
         new_scope.encloser = mv.live_scope
         mv.live_scope = new_scope
+        indent = mv.indent + 1
     else:
         error.error("Not a valid Scope kind", warning=True)
 
@@ -52,7 +56,7 @@ def enter_new_scope(mv, scope_kind):
         for var_name, var in mv.live_scope.encloser.symtab.items():
             mv.live_scope.symtab[var_name] = var
 
-    return mv.live_scope
+    return mv.live_scope, indent
 
 def exit_live_scope(mv):
     '''
@@ -60,7 +64,8 @@ def exit_live_scope(mv):
     Should call at the end of every node visit.
     '''
     mv.live_scope = mv.live_scope.encloser
-    print(f"Exiting scope, new live scope: {mv.live_scope.kind}")
+    mv.indent -= 1
+    print(f"Exiting scope, new live scope: {mv.live_scope.kind}, indent: {mv.indent}")
 
 def add_var_to_live_scope(mv, var):
     '''

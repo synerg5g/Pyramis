@@ -169,7 +169,7 @@ class Pyramis:
         self.gx.py_module.generate_linking_h()
 
         # linking.cpp
-        #self.gx.py_module.generate_linking_cpp()
+        self.gx.py_module.generate_linking_cpp()
 
 
     def do_build(self):
