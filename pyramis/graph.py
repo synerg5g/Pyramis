@@ -63,6 +63,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         self.events = {}
         self.calls = {} # history of CALLed python.Actions
         self.live_event = None
+        self.live_action = None
 
         self.root_scope = infer.Scope(infer.Scope.MODULE) # head
         self.live_scope = None # updated by enter_scope, exit_scope
@@ -230,6 +231,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         action = python.Action(self.gx, node.func.id, parent, _indent, self)
         print(f"Visiting action {action.name}, parent = {parent}")
         print(f"action indent: {_indent}")
+
+        self.live_action = action
 
         # print(f"Now visiting args of {node} i.e. action {action}")
         args = get_arg_nodes(node)
@@ -622,7 +625,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         self.log.debug(f"In LOOP") # all str, maybe some int
         _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
-        action = python.Action(self.gx, "LOOP", parent, indent, self)
+        action = python.Action(self.gx, "LOOP", parent, indent - 1, self)
 
         # it
         itr = infer.get_variable(self, 0, node.target.id, action)
@@ -641,7 +644,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         self.live_event.actions.append(action)
 
         for child in node.body:
-            self.visit(child, node)
+            self.visit(child, node, indent)
+        self.live_action.exits += 1
         
         infer.exit_live_scope(self)
 
@@ -650,7 +654,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         print(f"Visiting {node}, parent = {parent}")
         _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
-        action = python.Action(self.gx, "IF", parent, indent, self)
+        action = python.Action(self.gx, "IF", parent, indent-1, self)
         print(f"IF indent: {indent}")
         # create if utils.Conditions
         # returns a list
@@ -673,14 +677,21 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         for child in node.body:
             self.visit(child, node, indent) # parent of all these children will be an ast.IF
         print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
+        self.live_action.exits += 1 # mark
 
-        for child in node.orelse:
+        if node.orelse:
             indent -= 1
-            # create a basic ELSE ction
-            print(f"ELSE ident: {indent}")
             action_ = python.Action(self.gx, "ELSE", action, indent, self)
             self.live_event.actions.append(action_)
             indent += 1
+
+        for child in node.orelse:
+            # indent -= 1
+            # # create a basic ELSE ction
+            # print(f"ELSE ident: {indent}")
+            # action_ = python.Action(self.gx, "ELSE", action, indent, self)
+            # self.live_event.actions.append(action_)
+            # indent += 1
             self.visit(child, node, indent)
         
         infer.exit_live_scope(self)

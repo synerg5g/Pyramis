@@ -270,7 +270,8 @@ class Event:
             except:
                 pass
             action.emit()
-            self.generated.append(action.generated + "\n")
+            # action exits is an inaccurate way to track if-exits.
+            self.generated.append(action.generated + action.exits* "\t" + action.exits * "}" + "\n")
         
         self.generated.append("}")
 
@@ -285,6 +286,7 @@ class Action:
         self.vars = [] # references to python.Var(), stored in the enclosing scope.
 
         self.indent = indent # update via modulevisitor.
+        self.exits = 0 # scope exits
         self.generated = ""
 
     def emit(self):
@@ -375,11 +377,8 @@ class Action:
                 _args += _arg.name + ", "
                 _args = _args[:-2]
                 self.generated += _args
-                
-        self.generated += ");\n"
 
-        
-        
+        self.generated += ");\n"
 
     def emit_set(self):
         '''
@@ -445,13 +444,48 @@ class Action:
         pass
 
     def emit_loop(self):
-        pass
+        self.generated += "for ("
+        print(self.vars)
+        _itr = self.vars[0]
+        _low = self.vars[1]
+        _high  = self.vars[2]
 
+        self.generated += _itr.type.to_str() + " " + _itr.name + " = " + _low.name + "; "
+        self.generated += _itr.name + " < " + _high.name + "; "
+        self.generated += _itr.name + "++) {\n"
+    
     def emit_if(self):
-        pass
+        '''
+        cond
+        '''
+        print("conds are %s"%[var for var in self.vars])
+        print(len(self.vars))
+        self.generated += "if ("
+
+        cond = ""
+        for _cond in self.vars:
+            if (isinstance(_cond, utils.Condition)):
+                # lhs op, rhs
+                _lhs = _cond.lhs
+                _rhs = _cond.rhs
+                _op = _cond.op
+
+                if _op and _rhs:
+                    if "MACRO" in _rhs.name:
+                        _rhs.name = _rhs.name.split("(")[1][:-1]
+                    cond += _lhs.name + " " + _op + " " + _rhs.name
+                else:
+                    cond += _lhs.name
+            else:
+                # logical op (&&, ||)
+                assert(isinstance(_cond, str))
+                cond += " " + _cond + " "
+
+        self.generated += cond
+        self.generated += ") {\n"
 
     def emit_else(self):
-        #self.generated += "else: \n"
+        self.generated += "else { \n"
         pass
 
     def emit_read_config(self):
