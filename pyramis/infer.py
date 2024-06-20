@@ -73,6 +73,9 @@ def exit_live_scope(mv):
 def add_var_to_live_scope(mv, var):
     '''
     Relies on the fact that child scope inherits variables of its parent.
+    Symtab for an identifier may contain a list of python.Types
+    in case the protocol library has multiple structs with the same
+    name.
     '''
     # print(f"adding var to scope: {var}: {var.type}")
     if var.name not in mv.live_scope.symtab:
@@ -138,6 +141,7 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
     while(curr_scope.kind != Scope.MODULE):
         if (ident in curr_scope.symtab):
             # print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
+            # may even return a list
             return curr_scope.symtab[ident]
         else:
             # climb parent
@@ -194,9 +198,14 @@ def get_variable(mv, arg_idx, ident, parent):
                 # accessing attributes of an unitialised variable.
                 error.error("`%s`: Attempt to access unitialised variable `%s`"%(parent.name, root))
             elif (var.type):
+                if var.type.ident == "json":
+                    # any attribute of a json obj will have type json.
+                    # expect another layer of type assign during
+                    # code-gen for set/udf asString()
+                    final_t = python.Type("json") 
                 # print(f"Type of root {root} is {var.type}")
                 final_t = var.type.get_typeof(stem)
-                # print(f"Type of stem {stem} is {final_t}")
+                # print(f"Type of stem {stem} is {fi    nal_t}")
                 return python.Variable(arg_idx, ident, parent, final_t)
             else:
                 # invalid attribute access.
@@ -211,10 +220,15 @@ def test_valid_type(gx, arg):
 # for a single main struct
 # usage_indirection only from parse_udf.
 def reduce_to_type(gx, struct, base_types, usage_indirection):
+    print("reducing to type: %s"%struct)
     if isinstance(struct, list):
         # struct with multiple definitions
         # pick the one with most attributes
-        struct = struct[-1] # temp
+        _finals = []
+        for _struct in struct:
+            _finals.append(reduce_to_type(gx, _struct, base_types, usage_indirection))
+        return _finals
+
     assert(isinstance(struct, dict))
 
     if not isinstance(base_types, dict):
@@ -224,13 +238,21 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
     assert(isinstance(base_types, dict))
 
     if usage_indirection:
-        final = python.Type(struct["__name__"], usage_indirection)  
+        try:
+            final = python.Type(struct["__name__"], struct["__thing__"], usage_indirection)  
+        except KeyError as k:
+            print("keyerrror thing, ind")
+            final = python.Type(struct["__name__"], usage_indirection)
     else:
-        final = python.Type(struct["__name__"])  
+        try:
+            final = python.Type(struct["__name__"], struct["__thing__"]) 
+        except KeyError as k:
+            print("keyerror thing ,no ind")
+            final = python.Type(struct["__name__"]) # type becomes simple 
 
     attributes = struct["__attributes__"] # dict of dict
     for attr_name, attr in attributes.items(): # attr is a dict
-        if attr["__type__"] in C_TYPES:
+        if attr["__type__"] in C_TYPES: # terminal
             # in a ident a.b.c.d, looking for type_of(c) should return name of Python.Type() only (excluding subs)
             # eg: if c in t.subs, return t.sibs[c].type_str
             # remember invariant: Each python.Type() must be stored in the scope. Hence incomplete types are not accessed
@@ -242,8 +264,24 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             except:
                 nested_struct = base_types["struct " + attr["__type__"]] # this can become a python.type(), should be 
             
-            nested_ = reduce_to_type(gx, nested_struct, base_types, usage_indirection) # returns a python.Type with filled in subs
-            gx.type_cache[nested_.ident] = nested_
+            print(nested_struct)
+            
+            nested_ = reduce_to_type(gx, nested_struct, base_types, usage_indirection) # returns a python.Type with filled in subs or a list of types.
+            if isinstance(nested_, list):
+                print(f"Reduce returned list of types, reduce_to_type: {[(nested__.ident, nested__.thing) for nested__ in nested_]}")
+                gx.type_cache[nested_[0].ident] = nested_ # both have same ident, dont care
+            else:
+                assert(isinstance(nested_, python.Type))
+                print(f"Got single python.type: {nested_.ident, nested_.thing}")
+                print(nested_.subs.values())
+                try:
+                    print(f"Its attributes: {[(attr, attr_t.ident, attr_t.thing) for attr, attr_t in nested_.subs.items()]}")
+                except  AttributeError as a:
+                    # attr has list of types
+                    for attr, attr_t_list in nested_.subs.items():
+                        print(attr_t_list)
+                        print(f"Its attributes: {(attr, attr_t_list.ident, attr_t_list.thing)}")
+                gx.type_cache[nested_.ident] = nested_
             final.subs[attr["__id__"]] = nested_
         else:
             # enum type
@@ -280,7 +318,7 @@ def type_from_type_str(gx, arg, usage_indirection=None):
                 if arg != struct_name:
                     continue
                 else:
-                    # return first one by default
+                    # if multiple defns for same type, return a list
                     final = reduce_to_type(gx, struct, user_bases, usage_indirection)
                     return final
             assert(isinstance(struct, dict))
@@ -296,7 +334,9 @@ def type_from_type_str(gx, arg, usage_indirection=None):
             if arg != struct_name:
                 continue
             else:
-                # return first one by default
+                # return first one by default if multiple definitions of 
+                # same type
+                # ideally: store as a list when create_message is called.
                 final = reduce_to_type(gx, struct, pyramis_bases, usage_indirection)
                 return final
         assert(isinstance(struct, dict))

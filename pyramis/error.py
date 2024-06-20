@@ -38,7 +38,7 @@ def error(msg, node=None, warning=False, mv=None,
     # EXIT COMPILATION
     if not warning:
         print_error(result)
-        # sys.exit(1)
+        sys.exit(1)
 
 def print_error(error):
     (kind, filename, lineno, msg) = error

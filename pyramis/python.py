@@ -358,16 +358,32 @@ class Action:
         pass
 
     def emit_get_key(self):
-        pass
+        _id = self.vars[0].name
+        _type = self.vars[0].type
 
+        self.generated += _type.to_str() + " " + _id + " = " + "fd_to_key_map[sockfd];\n"
+        
     def emit_set_key(self):
-        pass
+        _key = self.vars[0].name
+
+        self.generated += "key_to_fd_map" + "[" + _key + "]" + " = sockfd;\n"
 
     def emit_append(self):
         pass
 
     def emit_call(self):
-        pass
+        _event = self.vars[0].name 
+
+        self.generated += _event + "("
+
+        _args = ""
+        for _arg in self.vars[1:]:
+            _id = _arg.name
+            _args += _id + ", "
+        _args = _args[:-2]
+
+        self.generated += _args + ");\n"
+        
 
     def emit_store(self):
         pass
@@ -385,19 +401,20 @@ class Action:
         pass
 
     def emit_else(self):
+        #self.generated += "else: \n"
         pass
 
     def emit_read_config(self):
         pass
 
     def emit_break(self):
-        pass
+        self.generated += "break;\n"
 
     def emit_continue(self):
-        pass
+        self.generated += "continue'\n"
 
     def emit_pass(self):
-        pass
+        self.generated += ";\n"
 
 
 class UserDefined:
@@ -407,14 +424,26 @@ class UserDefined:
         self.ret_type = ret_type
 
 class Variable:
+    '''
+    Invariants
+    1. self.type == None only if ident hasnt been assigned concrete type yet
+    2. self.type == Type.Multiple (str) only if a search for concrete python.Type returns a list of types.
+    --> in this case, self.possible_types must be list.
+    3. self.type == python.Type() only if a concrete type has been assigned to the ident.
+    '''
     def __init__(self, arg_idx, name, parent, type=None):
         self.arg_idx = arg_idx
         self.name = name
         self.parent = parent # usually a python.Action
         self.invisible = False # not in C++
         self.formal_arg = False
-        self.type = type
+
         # assign self.type from somewhere.
+        if isinstance(type, list):
+            self.possible_types = type
+            self.type = Type.MULTIPLE
+        else:
+            self.type = type
 
     def type_to_str(self):
         if self.type.ident == "char" and self.type.thing == utils.TH_ARRAY:
@@ -462,6 +491,7 @@ class Timer:
         self._callback = _callback
 
 class Type:
+    MULTIPLE = "multi_type" # type assigned but multiple struct defintions.
     def __init__(self, ident, thing=utils.TH_SIMPLE, indirection=None):
         self.ident = ident # typename
         self.subs = {} # attr:Type
@@ -491,15 +521,49 @@ class Type:
         list of attributes encountered in the path to that sub attribute
         '''
         path = []
+        print(f"enter {self.ident}")
+        print(f"{self.ident} has subs {self.subs}")
+        print(f"{self.ident} is of thing type {self.thing}")
+        # for sub in self.subs.values():
+        #     print(sub.ident, sub.thing)
+        if not self.subs:
+            if self.thing == thing:
+                print("found thing")
+                return self
+            return []
         for attr_id, sub_type in self.subs.items():
-            if sub_type.thing == thing:
-                path.append(attr_id)
-                return path
-            sub_path = sub_type.path_to(thing)
-            if sub_path:
-                path.append(attr_id)
-                path.extend(sub_path)
-                return path
+            print(f"Check attr {attr_id}")
+            if isinstance(sub_type, list):
+                for _sub in sub_type:
+                    if _sub.thing == thing:
+                        print(f"{_sub} has {thing}")
+                        path.append(attr_id)
+                        return path
+                    else:
+                        _sub_path = _sub.path_to(thing)
+                    if _sub_path:
+                        path.append(attr_id)
+                        path.extend(sub_path)
+                        return path
+            else:
+                print(f"{attr_id} has a unique single type")
+                print(self.subs[attr_id])
+                print(sub_type.ident, sub_type.thing)
+                print(self.thing)
+                if self.thing == thing:
+                    print(f"{sub_type.ident} has {thing}")
+                    path.append(attr_id)
+                    return path
+                if sub_type.thing == thing:
+                    print(f"{sub_type.ident} has {thing}")
+                    path.append(attr_id)
+                    return path
+                else:
+                    sub_path = sub_type.path_to(thing)
+                if sub_path:
+                    path.append(attr_id)
+                    path.extend(sub_path)
+                    return path
         return [] 
     
     def _contains(self, attr):
@@ -525,13 +589,13 @@ class Type:
         _, type = self._contains(attr)
         return type
 
-    def __str__(self):
-        _str = f"{self.ident}\n"
-        if not self.subs:
-            return self.ident
-        for s, st in self.subs.items():
-            _str += f"\t{s}: {str(st)}"
-        return _str
+    # def __str__(self):
+    #     _str = f"{self.ident}\n"
+    #     if not self.subs:
+    #         return self.ident
+    #     for s, st in self.subs.items():
+    #         _str += f"\t{s}: {str(st)}"
+    #     return _str
 
 def main():
     # primitive C++ types
@@ -543,7 +607,7 @@ def main():
     # this type creation should be simulated by the 
     # asn parser.
     t1 = Type("nas_t")
-    t1.subs["sst"] = int_t
+    t1.subs["sst"] = [int_t, float_t]
     t1.subs["ssd"] = float_t
     t2 = Type("secuheader_t") # type of an attribute of t1
     t1.subs["shdr"] = t2

@@ -44,10 +44,21 @@ def consolidate_duplicate_types(all_types):
         if name not in consolidated:
             consolidated[name] = struct
         else:
-            # If name already exists, convert value to a list if not already
-            if not isinstance(consolidated[name], list):
+            if isinstance(consolidated[name], list):
+                dup = False
+                # check for true duplicates
+                for _struct in consolidated[name]:
+                    if struct["__attributes__"] == _struct["__attributes__"]:
+                        print("True duplicate struct %s, ignore definition"%name)
+                        dup = True
+                if not dup:
+                    consolidated[name].append(struct)
+            # If name already exists in base types, convert that value to a list
+            # i.e. we just encountered the second unique definition of 
+            # some struct in headers.
+            else:
                 consolidated[name] = [consolidated[name]]
-            consolidated[name].append(struct)
+                consolidated[name].append(struct)
     return consolidated
 
 class GlobalInfo:

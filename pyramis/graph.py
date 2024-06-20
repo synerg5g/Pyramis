@@ -239,11 +239,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 if len(args) == 2:
                     # last arg is the var_type
                     _t = args[-1].value
-                    _type = infer.type_from_type_str(self.gx, _t)
-                    var = python.Variable(0, args[0].value, action, _type)
+                    _type = infer.type_from_type_str(self.gx, _t) # may return list of types -> in case your library has multiple definitions of the same struct.
+                    
+                    var = python.Variable(0, args[0].value, action, _type) # here, if _type is a list, store both in this var's possible_types. 
                     
                     # action->var ref
-                    action.vars.append(var)
+                    action.vars.append(var) # if an ident has two types, 
 
                     # scope -> var ref
                     infer.add_var_to_live_scope(self, var)
@@ -362,7 +363,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 GET_KEY(<key_identifier>)
 
                 Returns the procedure identifier key
-                mapped to the sending fd.
+                mapped to the sending fd. (i.e. fd that just detected the epollin event)
                 i.e. gets <key_identifier> = fdtokeymap[fd]
                 '''
                 key_name = args[0].value
@@ -395,21 +396,34 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 container_var = infer.get_variable(self, 0, args[0].value, action)
                 assert(container_var.type) # is this fair? yes.
 
-                # attr ids encountered
-                # path will need to be printed with dots.
-                path = container_var.type.path_to(utils.TH_ARRAY)
+                # if multiple types
+                if container_var.type == python.Type.MULTIPLE:
+                    for _type in container_var.possible_types:
+                        path = _type.path_to(utils.TH_ARRAY)
+                        if path:
+                            break
+                else:
+                    path = container_var.type.path_to(utils.TH_ARRAY)
                 
+                if path:
+                    container_var.name = container_var.name + "." + ".".join(path)
+                    action.vars.append(container_var)
+                    print(container_var)
+                else:
+                    # indent does not contain an attribute of container type.
+                    error.error("APPEND: %s does not contain attribute of container type"%container_var.name)
+
+                # attr ids encountered
+                # path will need to be printed with dots
                 # var 1 = dotted path, var 2 = var2
-                container_var = container_var.name + "." + ".".join(path)
-                action.vars.append(container_var)
 
                 # check that type rhs equals lhs
                 to_add_var = infer.get_variable(self, 1, args[1].value, action)
                 action.vars.append(to_add_var)
-
+                assert(0)
                 if not (container_var.type.equals(to_add_var.type)):
                     # type mismatch error
-                    error.error("APPEND:: Type mismatch: Trying to append `%s` to list of `%s`"%to_add_var.type.ident %container_var.ident)
+                    error.error("APPEND:: Type mismatch: Trying to append `%s` to list of `%s`"%(to_add_var.type.ident, container_var.name))
                 infer.add_var_to_live_scope(container_var)
             
             case "CALL":
