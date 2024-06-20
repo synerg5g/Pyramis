@@ -352,7 +352,34 @@ class Action:
         
 
     def emit_udf(self):
-        pass
+        # declare all undeclared args
+        for _arg in self.vars[2:]:
+            if "MACRO" in _arg.name:
+                _arg.name = _arg.name.split("(")[1][:-1]
+            if _arg.undecl and _arg.type.thing != utils.TH_ENUM:
+                self.generated += _arg.type.to_str() + " " + _arg.name + " {};\n"
+
+        _fn = self.vars[1]
+        _ret_id = self.vars[0]
+        if _ret_id.undecl:
+            self.generated += _ret_id.type.to_str() + " " + _ret_id.name + " = "
+        self.generated += _fn + "("
+
+        _args= ""
+        for _arg in self.vars[2:]:
+            if (len(self.vars[2:]) == 1):
+                _args += _arg.name
+                self.generated += _args + ");\n"
+                return 
+            else:
+                _args += _arg.name + ", "
+                _args = _args[:-2]
+                self.generated += _args
+                
+        self.generated += ");\n"
+
+        
+        
 
     def emit_set(self):
         '''
@@ -457,6 +484,7 @@ class Variable:
     def __init__(self, arg_idx, name, parent, type=None, undecl = False):
         self.arg_idx = arg_idx
         self.name = name
+
         self.parent = parent # usually a python.Action
         self.invisible = False # not in C++
         self.formal_arg = False

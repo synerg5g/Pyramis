@@ -311,6 +311,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 if not ret_v.type:
                     ret_v.type = udf.ret_type
                 action.vars.append(ret_v)
+                action.vars.append(udf_name)
 
                 # print([v.value for v in args[2:]])
                 for i, _v in enumerate(args[2:]):
