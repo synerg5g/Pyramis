@@ -404,11 +404,17 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             break
                 else:
                     path = container_var.type.path_to(utils.TH_ARRAY)
+                    stem = path[-1]
                 
                 if path:
-                    container_var.name = container_var.name + "." + ".".join(path)
+                    print("found array seq!")
+                    new_var_name = container_var.name + "." + ".".join(path)
+                    new_var_t = container_var.type.get_typeof(stem)
+                    print(new_var_t.ident, new_var_t.thing, new_var_t.asn_seq)
+                    new_var = python.Variable(-1, new_var_name, action, new_var_t)
+                    container_var.seq_alias = new_var
                     action.vars.append(container_var)
-                    print(container_var)
+                    print(container_var.seq_alias.name)
                 else:
                     # indent does not contain an attribute of container type.
                     error.error("APPEND: %s does not contain attribute of container type"%container_var.name)
@@ -420,11 +426,14 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 # check that type rhs equals lhs
                 to_add_var = infer.get_variable(self, 1, args[1].value, action)
                 action.vars.append(to_add_var)
-                assert(0)
-                if not (container_var.type.equals(to_add_var.type)):
-                    # type mismatch error
-                    error.error("APPEND:: Type mismatch: Trying to append `%s` to list of `%s`"%(to_add_var.type.ident, container_var.name))
-                infer.add_var_to_live_scope(container_var)
+
+                print(action.vars[0].seq_alias.name)
+
+                # minor bug in type-checking
+                # if not (container_var.type.equals(to_add_var.type)):
+                #     # type mismatch error
+                #     error.error("APPEND:: Type mismatch: Trying to append `%s` to list of `%s`"%(to_add_var.type.ident, container_var.type.ident))
+                infer.add_var_to_live_scope(self, container_var)
             
             case "CALL":
                 '''

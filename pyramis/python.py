@@ -369,8 +369,11 @@ class Action:
         self.generated += "key_to_fd_map" + "[" + _key + "]" + " = sockfd;\n"
 
     def emit_append(self):
-        pass
-
+        _container = self.vars[0].seq_alias
+        _to_add = self.vars[1]
+        if _container.type.asn_seq:
+            self.generated += "ASN_SEQUENCE_ADD(&" + _container.name + ", &" + _to_add.name + ");\n"
+        
     def emit_call(self):
         _event = self.vars[0].name 
 
@@ -437,6 +440,7 @@ class Variable:
         self.parent = parent # usually a python.Action
         self.invisible = False # not in C++
         self.formal_arg = False
+        self.seq_alias = None
 
         # assign self.type from somewhere.
         if isinstance(type, list):
@@ -492,12 +496,13 @@ class Timer:
 
 class Type:
     MULTIPLE = "multi_type" # type assigned but multiple struct defintions.
-    def __init__(self, ident, thing=utils.TH_SIMPLE, indirection=None):
+    def __init__(self, ident, thing=utils.TH_SIMPLE, indirection=None, asn_seq=None):
         self.ident = ident # typename
         self.subs = {} # attr:Type
         self.thing = thing  
         self.indirection = indirection # use during translate()
         self.sz = None
+        self.asn_seq = asn_seq
 
     def to_str(self):
         if self.ident == "char" and self.thing == utils.TH_ARRAY:

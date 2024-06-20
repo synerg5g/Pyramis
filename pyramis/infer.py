@@ -239,7 +239,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
 
     if usage_indirection:
         try:
-            final = python.Type(struct["__name__"], struct["__thing__"], usage_indirection)  
+            final = python.Type(struct["__name__"], struct["__thing__"], usage_indirection, struct["__asn_seq__"])  
         except KeyError as k:
             print("keyerrror thing, ind")
             final = python.Type(struct["__name__"], usage_indirection)
@@ -257,7 +257,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             # eg: if c in t.subs, return t.sibs[c].type_str
             # remember invariant: Each python.Type() must be stored in the scope. Hence incomplete types are not accessed
             # incividually. 
-            final.subs[attr["__id__"]] = python.Type(attr["__type__"], attr["__thing__"], attr["__ptr__"])
+            final.subs[attr["__id__"]] = python.Type(attr["__type__"], attr["__thing__"], attr["__ptr__"], attr["__asn_seq__"])
         elif (attr["__type__"] in base_types) or ("struct " + attr["__type__"]) in base_types:
             try:
                 nested_struct = base_types[attr["__type__"]] # this can become a python.type(), should be 
@@ -274,18 +274,24 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
                 assert(isinstance(nested_, python.Type))
                 print(f"Got single python.type: {nested_.ident, nested_.thing}")
                 print(nested_.subs.values())
-                try:
-                    print(f"Its attributes: {[(attr, attr_t.ident, attr_t.thing) for attr, attr_t in nested_.subs.items()]}")
-                except  AttributeError as a:
-                    # attr has list of types
-                    for attr, attr_t_list in nested_.subs.items():
-                        print(attr_t_list)
-                        print(f"Its attributes: {(attr, attr_t_list.ident, attr_t_list.thing)}")
+                # try:
+                #     print(f"Its attributes: {[(attr, attr_t.ident, attr_t.thing) for attr, attr_t in nested_.subs.items()]}")
+                # except  AttributeError as a:
+                #     # attr has list of types
+                #     for attr, attr_t_list in nested_.subs.items():
+                #         print(attr_t_list)
+                #         print(f"Its attributes: {(attr, attr_t_list.ident, attr_t_list.thing)}")
                 gx.type_cache[nested_.ident] = nested_
             final.subs[attr["__id__"]] = nested_
         else:
             # enum type
-            final.subs[attr_name] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
+            thing = attr["__thing__"]
+            if thing != utils.TH_ARRAY:
+                print(f"attr {attr_name} is being assigned enum thing. old thing: {thing}")
+                final.subs[attr_name] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
+            else:
+                print(f'attr {attr_name} is being retained: {attr["__type__"]}, {thing}, asn seq: {attr["__asn_seq__"]}')
+                final.subs[attr_name] = python.Type(attr["__type__"], thing, usage_indirection, attr["__asn_seq__"])
 
     ## print(struct)
     return final

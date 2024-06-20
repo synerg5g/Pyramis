@@ -70,7 +70,7 @@ def do_struct(mini):
         elif (m_typedef):
             old = m_typedef.group(1)
             new = m_typedef.group(3)
-            #print(new)            
+            print(new)            
             struct = Struct(TH_TYPEDEF, new)
             struct.tag_name = old
             #print(struct)
@@ -546,6 +546,7 @@ class Attribute:
         self.id = id # attr id
         self.type_str = type_str # attr_type_str
         self.ptr_indirection = 0 # count of indirection
+        self.asn_seq = False
     
     def __str__(self):
         return f"[{self.type_str}] [{self.id}]\n"
@@ -557,10 +558,11 @@ class Attribute:
         if ("@@") in self.id:
             self.id = self.id.replace("@", "")
             self.thing = TH_ARRAY
+            self.asn_seq = True
 
         self.id = self.id.strip("*")
         self.id = self.id.split(":")[0] if ":" in self.id else self.id.split("[")[0]
-        return {"__id__": self.id, "__type__": self.type_str, "__thing__": self.thing, "__ptr__": self.ptr_indirection,}
+        return {"__id__": self.id, "__type__": self.type_str, "__thing__": self.thing, "__ptr__": self.ptr_indirection, "__asn_seq__": self.asn_seq,}
 
 
 class Struct:
