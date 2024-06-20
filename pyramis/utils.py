@@ -70,7 +70,7 @@ def do_struct(mini):
         elif (m_typedef):
             old = m_typedef.group(1)
             new = m_typedef.group(3)
-            print(new)            
+            #print(new)            
             struct = Struct(TH_TYPEDEF, new)
             struct.tag_name = old
             #print(struct)

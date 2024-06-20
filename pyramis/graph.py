@@ -328,6 +328,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     infer.add_var_to_live_scope(self, var)
             
             case "SET":
+                '''
+                If SET-ing an identifier that has not been used earlier,
+                i.e. get_from_scope = null,
+                code-emit must emit it with its declaration.
+                '''
                 untyped = []
                 typed = []
                 for i, _v in enumerate(args):
@@ -336,7 +341,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
                     if not var:
                         # rare
+                        print("setting undeclared var %s"%_v.value)
                         var = python.Variable(i, _v.value, action)
+                        var.undecl = True
                     
                     if var.type:
                         typed.append(var)
@@ -354,8 +361,10 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         if len(untyped) == 2:
                             # assigning unknown to unknown
                             print([v.name for v in untyped])
+
                         
                     action.vars.append(var)
+                    print(f"var: {var.name}, undecl = {var.undecl}")
                     infer.add_var_to_live_scope(self, var)
 
             case "GET_KEY": # try get_procedure_key

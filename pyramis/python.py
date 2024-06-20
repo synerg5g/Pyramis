@@ -355,7 +355,27 @@ class Action:
         pass
 
     def emit_set(self):
-        pass
+        '''
+        undecl, decl set according to path taken by
+        infer.get_variable()
+        '''
+        _lhs = self.vars[0]
+        _rhs = self.vars[1]
+
+        if "MACRO" in _rhs.name:
+            _rhs.name = _rhs.name.split("(")[1][:-1]
+
+        if _lhs.undecl:
+            if _rhs.type.thing == utils.TH_ARRAY:
+                self.generated += _lhs.type.to_str() + " " + _lhs.name + "(" + _rhs.name + ");\n"
+            else:
+                self.generated += _rhs.type.to_str() + " " + _lhs.name + " = " + _rhs.name + ";\n"
+        elif not _lhs.undecl: # dotted always undecl = False
+            if _rhs.type.thing == utils.TH_ARRAY:
+                # memcpy
+                self.generated += "memcpy(" + _lhs.name + ", " + _rhs.name + ".data(), " + _rhs.name + ".size());\n"
+            else:
+                self.generated += _lhs.name + " = " + _rhs.name + ";\n"
 
     def emit_get_key(self):
         _id = self.vars[0].name
@@ -434,13 +454,14 @@ class Variable:
     --> in this case, self.possible_types must be list.
     3. self.type == python.Type() only if a concrete type has been assigned to the ident.
     '''
-    def __init__(self, arg_idx, name, parent, type=None):
+    def __init__(self, arg_idx, name, parent, type=None, undecl = False):
         self.arg_idx = arg_idx
         self.name = name
         self.parent = parent # usually a python.Action
         self.invisible = False # not in C++
         self.formal_arg = False
         self.seq_alias = None
+        self.undecl = undecl
 
         # assign self.type from somewhere.
         if isinstance(type, list):
@@ -526,9 +547,9 @@ class Type:
         list of attributes encountered in the path to that sub attribute
         '''
         path = []
-        print(f"enter {self.ident}")
-        print(f"{self.ident} has subs {self.subs}")
-        print(f"{self.ident} is of thing type {self.thing}")
+        # print(f"enter {self.ident}")
+        # print(f"{self.ident} has subs {self.subs}")
+        # print(f"{self.ident} is of thing type {self.thing}")
         # for sub in self.subs.values():
         #     print(sub.ident, sub.thing)
         if not self.subs:
@@ -551,16 +572,16 @@ class Type:
                         path.extend(sub_path)
                         return path
             else:
-                print(f"{attr_id} has a unique single type")
-                print(self.subs[attr_id])
-                print(sub_type.ident, sub_type.thing)
-                print(self.thing)
+                # print(f"{attr_id} has a unique single type")
+                # print(self.subs[attr_id])
+                # print(sub_type.ident, sub_type.thing)
+                # print(self.thing)
                 if self.thing == thing:
-                    print(f"{sub_type.ident} has {thing}")
+                    #print(f"{sub_type.ident} has {thing}")
                     path.append(attr_id)
                     return path
                 if sub_type.thing == thing:
-                    print(f"{sub_type.ident} has {thing}")
+                    #print(f"{sub_type.ident} has {thing}")
                     path.append(attr_id)
                     return path
                 else:

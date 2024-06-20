@@ -189,7 +189,7 @@ def get_variable(mv, arg_idx, ident, parent):
             # no python.Var() has ever been created in THIS scope.
             # return untyped variable
             # print(f"Created a new untyped python.Variable for {ident}")
-            return python.Variable(arg_idx, ident, parent)
+            return python.Variable(arg_idx, ident, parent, undecl=True)
         else:
             # if dotted not found, search for type of root
             # print(f"Getting variable of root {root}")
@@ -238,17 +238,9 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
     assert(isinstance(base_types, dict))
 
     if usage_indirection:
-        try:
-            final = python.Type(struct["__name__"], struct["__thing__"], usage_indirection, struct["__asn_seq__"])  
-        except KeyError as k:
-            print("keyerrror thing, ind")
-            final = python.Type(struct["__name__"], usage_indirection)
+        final = python.Type(struct["__name__"], usage_indirection)  
     else:
-        try:
-            final = python.Type(struct["__name__"], struct["__thing__"]) 
-        except KeyError as k:
-            print("keyerror thing ,no ind")
-            final = python.Type(struct["__name__"]) # type becomes simple 
+        final = python.Type(struct["__name__"]) # type becomes simple 
 
     attributes = struct["__attributes__"] # dict of dict
     for attr_name, attr in attributes.items(): # attr is a dict
@@ -264,23 +256,16 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             except:
                 nested_struct = base_types["struct " + attr["__type__"]] # this can become a python.type(), should be 
             
-            print(nested_struct)
+            # print(nested_struct)
             
             nested_ = reduce_to_type(gx, nested_struct, base_types, usage_indirection) # returns a python.Type with filled in subs or a list of types.
             if isinstance(nested_, list):
-                print(f"Reduce returned list of types, reduce_to_type: {[(nested__.ident, nested__.thing) for nested__ in nested_]}")
+                # print(f"Reduce returned list of types, reduce_to_type: {[(nested__.ident, nested__.thing) for nested__ in nested_]}")
                 gx.type_cache[nested_[0].ident] = nested_ # both have same ident, dont care
             else:
                 assert(isinstance(nested_, python.Type))
-                print(f"Got single python.type: {nested_.ident, nested_.thing}")
-                print(nested_.subs.values())
-                # try:
-                #     print(f"Its attributes: {[(attr, attr_t.ident, attr_t.thing) for attr, attr_t in nested_.subs.items()]}")
-                # except  AttributeError as a:
-                #     # attr has list of types
-                #     for attr, attr_t_list in nested_.subs.items():
-                #         print(attr_t_list)
-                #         print(f"Its attributes: {(attr, attr_t_list.ident, attr_t_list.thing)}")
+                # print(f"Got single python.type: {nested_.ident, nested_.thing}")
+                # print(nested_.subs.values())
                 gx.type_cache[nested_.ident] = nested_
             final.subs[attr["__id__"]] = nested_
         else:
