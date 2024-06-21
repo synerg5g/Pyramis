@@ -612,6 +612,10 @@ class Interface:
         else:
             return False
         
+    def get_peer_ip(self, peer_name):
+        assert(self.is_peer_node(peer_name))
+        
+        
 # ideally, an If parse should generate a list of 
 # Conditions as objects.
 # value is the str a op b, 

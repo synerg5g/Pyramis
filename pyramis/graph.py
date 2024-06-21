@@ -53,6 +53,18 @@ def get_arg_nodes(node):
 
     return args
 
+def get_last_action(node):
+    '''
+    Given a ast.Node, return the last action
+    in its nesting definition.
+    '''
+    if hasattr(node, "body"): # if, for
+        if not hasattr(node.body[-1], "body"):
+            return node.body[-1]
+        return get_last_action(node.body[-1])
+    else:
+        return node
+        
 class ModuleVisitor(ast_utils.BaseNodeVisitor):
     def __init__(self, module, gx):
         ast_utils.BaseNodeVisitor.__init__(self)
@@ -220,7 +232,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
         infer.exit_live_scope(self)
             
-    def visit_Call(self, node, parent=None, _indent=None):
+    def visit_Call(self, node, parent=None, _indent=None, _last_else_action=None):
         '''
         '''
         # func is of type python.Event() 
@@ -233,6 +245,14 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         print(f"action indent: {_indent}")
 
         self.live_action = action
+
+        try:
+            if node == _last_else_action.value:
+                print(f"last action {action.name}")
+                self.live_action.exits +=1
+                _last_else_action = None
+        except:
+            pass
 
         # print(f"Now visiting args of {node} i.e. action {action}")
         args = get_arg_nodes(node)
@@ -548,7 +568,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     map = self.gx.maps[map_name]
                 else:
                     map = python.Map(map_name)
-                
+                    # add map to maps
+                    self.gx.maps[map_name] = map
+
                 key = args[1].value
                 key_v = infer.get_variable(self, 1, key, action)
                 if (key_v.type):
@@ -571,10 +593,6 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 infer.add_var_to_live_scope(self, attr_v)
                 infer.add_var_to_live_scope(self, key_v)
 
-                # add map to maps
-                self.gx.maps[map_name] = map
-
-
             case "LOOKUP":
                 '''
                 LOOKUP(<store_val_at_ident>, <from_map>, <at_key>, <attribute_of_map_struct>)
@@ -582,9 +600,25 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 - add to scope.
                 - Just create an empty action, with state for future dead code elim.
                 '''
-                for i, _v in enumerate(args):
+                _ident = args[0].value
+                _ident_v = infer.get_variable(self, 0, _ident, action) # likely undecl
+                action.vars.append(_ident_v)
+                infer.add_var_to_live_scope(self, _ident_v)
+
+                map_name = args[1].value
+                if map_name in self.gx.maps:
+                    map = self.gx.maps[map_name]
+                else:
+                    map = python.Map(map_name)
+                    # add map to maps
+                    self.gx.maps[map_name] = map
+
+                action.vars.append(map)
+
+                for i, _v in enumerate(args[2:]):
                     var = infer.get_variable(self, i, _v.value, action)
                     action.vars.append(var)
+                    infer.add_var_to_live_scope(self, var)
 
             case "SEND":
                 '''
@@ -604,7 +638,25 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 #  else:
                 #     # only pass the the procedure_key
                 # procedure key is defined as the ident passed to the keygen UDF
-                message = args[0].value
+                _this_nf = args[1]
+                _peer_nf = args[2]
+                _receiving_interface = args[3]
+                try:
+                    _callback = args[4]
+                except IndexError:
+                    _callback = None
+
+                this_interface = self.gx.interfaces[_this_nf]
+                peer_interface = self.gx.peer_interfaces[_peer_nf]
+                # print(self.gx.interfaces)
+
+                # for iface in this_interface.peer_nodes:
+                #     print(iface)
+                assert(0)
+                _peer_ip = peer_interface.ip
+                _peer_port = peer_interface.port
+                _msg = args[0]
+                _conn_type = 
 
             case "TIMER_STOP":
                 pass
@@ -621,7 +673,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         #print(f"Arg: {node.value}\nType: {type(node.value)}")
         self.log.debug(f"do arg {idx} i.e. {node} of {parent}")
         
-    def visit_For(self, node, parent=None, _indent=None):
+    def visit_For(self, node, parent=None, _indent=None, _last_else_action=None):
         self.log.debug(f"In LOOP") # all str, maybe some int
         _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
@@ -650,7 +702,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         infer.exit_live_scope(self)
 
 
-    def visit_If(self, node, parent=None, _indent=None):
+    def visit_If(self, node, parent=None, _indent=None, _last_else_action=None):
         print(f"Visiting {node}, parent = {parent}")
         _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
@@ -675,24 +727,30 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         self.live_event.actions.append(action)
 
         for child in node.body:
-            self.visit(child, node, indent) # parent of all these children will be an ast.IF
+            self.visit(child, node, indent, _last_else_action) # parent of all these children will be an ast.IF
         print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
         self.live_action.exits += 1 # mark
 
         if node.orelse:
             indent -= 1
-            action_ = python.Action(self.gx, "ELSE", action, indent, self)
+            action_ = python.Action(self.gx, "ELSE", action, indent - 1, self)
             self.live_event.actions.append(action_)
             indent += 1
-
-        for child in node.orelse:
-            # indent -= 1
-            # # create a basic ELSE ction
-            # print(f"ELSE ident: {indent}")
-            # action_ = python.Action(self.gx, "ELSE", action, indent, self)
-            # self.live_event.actions.append(action_)
-            # indent += 1
-            self.visit(child, node, indent)
+            last = get_last_action(node)
+            #last = node.orelse[-1]
+            print(f"last in else: {last.value.func.id}")
+            assert(isinstance(last, ast.Expr))
+            print(last.value.func.id)
+            #assert(0)
+            for child in node.orelse:
+                # indent -= 1
+                # # create a basic ELSE ction
+                # print(f"ELSE ident: {indent}")
+                # action_ = python.Action(self.gx, "ELSE", action, indent, self)
+                # self.live_event.actions.append(action_)
+                # indent += 1
+                self.visit(child, node, indent, last.value)
+        #self.live_action.exits += 1 
         
         infer.exit_live_scope(self)
         

@@ -98,6 +98,7 @@ class Module(PyObject):
         self.live_map = None # set by Event
         self.previous_map = None # set by action
         self.previous_action = None # set by action
+        self.mutex = False
 
         self.generated = [] # store converted text from events.
 
@@ -175,12 +176,14 @@ class Module(PyObject):
         for event in self.events.values():
             event.emit(self) # pass module for access to live_map
             self.generated.extend(event.generated) # contains all event text.
-            self.generated += "\n\n"
+            
+            self.generated += "}\n\n" # each event needs a closing bracket.
 
             # reset
             self.live_map = None
             self.previous_map = None
             self.previous_action = None
+            self.mutex = False
 
 
         file = self.gx.output_dir / f"{self.gx.nf_name}_linking.cpp"
@@ -267,6 +270,9 @@ class Event:
 
 
     def emit(self, module):
+        '''
+        p_m_ul can only be triggered by the next action.
+        '''
         # get function header
         _event_decl = self.decl
         self.generated.append(_event_decl + " {\n")
@@ -279,24 +285,42 @@ class Event:
             except:
                 pass
             
-            action.emit(module)
-
+            # if action is map
             if action.name == "STORE" or action.name == "LOOKUP":
                 if action.name == "STORE":
                     _map = action.vars[0]
                 elif action.name == "LOOKUP":
                     _map = action.vars[1]
+
                 module.live_map = _map
 
-                if module.previous_action.name == "STORE" or module.previous_action.name =="LOOKUP":
+                # EVENT - map sequence
+                # map is first action
+                if not module.previous_action:
+                    pass
+                # map, map sequence.
+                # map follows map
+                elif module.previous_action.name == "STORE" or module.previous_action.name =="LOOKUP":
+                    # if current map different from previous map, unlock previous
                     if module.previous_map and (module.live_map.name != module.previous_map.name):
-                        self.generated.append("\npthread_mutex_unlock(&" + _map.name + "_lock);\n")
+                        # unlock previous map
+                        self.generated.append("pthread_mutex_unlock(&" + module.previous_map.name + "_lock);\n")
+            else: # if action is non-map
+                if not module.previous_action: # non-map action is first, emit
+                    print("No previous actin")
+                # map, non-map sequence
+                elif module.previous_action.name == "STORE" or module.previous_action.name =="LOOKUP":
+                    # unlock previous map
+                    self.generated.append("pthread_mutex_unlock(&" + module.previous_map.name + "_lock);\n")
+                    
+            action.emit(module) # do p_m_l for store/lookup, do access
 
-            self.generated.append(action.generated + action.exits* "\t" + action.exits * "}" + "\n")
+            print(f"{action.name} exits {action.exits} scopes")
+            self.generated.append(action.generated + action.indent* "\t" + action.exits * "}" + "\n")
 
             module.previous_action = action
 
-        self.generated.append("}")
+        #self.generated.append("}")
 
 class Action:
     pyramis_actions = utils.PYRAMIS_ACTIONS
@@ -458,7 +482,6 @@ class Action:
 
         self.generated += _args + ");\n"
         
-
     def emit_store(self, module):
         # do stuff
         # ....
@@ -470,15 +493,18 @@ class Action:
             if module.previous_action == "STORE" or module.previous_action == "LOOKUP":
                 assert(module.previous_map)
                 if module.live_map.name != module.previous_map.name:
-                    self.generated += "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
+                    # new lock for current map
+                    self.generated += self.indent * "\t" + "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
                 else:
                     pass
+            else:
+                self.generated += self.indent * "\t" + "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
 
         except AttributeError as a:
-            # no previous action - first in event
+            # no previous action - first action in event
+            # is a store.
             assert(not module.previous_map)
-            assert(not module.live_map)
-            self.generated += "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
+            self.generated += self.indent * "\t" + "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
         
         _map = module.live_map
         _key = self.vars[1]
@@ -490,7 +516,42 @@ class Action:
         module.previous_map = _map
 
     def emit_lookup(self, module):
-        pass
+        '''
+        <ident.type> <ident.name> = <map>[key].<attribute>
+        '''
+        # when prev action  = none and previous, live map = none
+        try:
+            if module.previous_action == "STORE" or module.previous_action == "LOOKUP":
+                assert(module.previous_map)
+                if module.live_map.name != module.previous_map.name:
+                    # new lock for current map
+                    self.generated += self.indent * "\t" + "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
+                else:
+                    pass
+            else:
+                self.generated += self.indent * "\t" + "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
+
+        except AttributeError as a:
+            # no previous action - first action in event
+            # is a store.
+            assert(not module.previous_map)
+            self.generated += self.indent * "\t" + "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
+        
+        _map = module.live_map
+
+        _id = self.vars[0]
+        _map = self.vars[1]
+        _key = self.vars[2]
+        _attr = self.vars[3]
+
+        if _id.undecl:
+            self.generated += self.indent * "\t" + _id.type.to_str() + " " + _id.name + " = "
+        else:
+            self.generated += self.indent * "\t" + _id.name + " = "
+    
+        self.generated += _map.name + "[" + _key.name + "]." + _attr.name + ";\n"
+
+        module.previous_map = _map
 
     def emit_send(self, module):
         pass
