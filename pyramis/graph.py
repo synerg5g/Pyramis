@@ -566,7 +566,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
                 map.add_to_map_struct(attr_v)
 
-                action.vars.extend([map_name, ])
+                action.vars.extend([map, key_v, attr_v, attr_val_v])
 
                 infer.add_var_to_live_scope(self, attr_v)
                 infer.add_var_to_live_scope(self, key_v)

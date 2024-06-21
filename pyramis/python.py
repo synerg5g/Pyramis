@@ -94,6 +94,10 @@ class Module(PyObject):
         self.node = node 
 
         self.events = collections.OrderedDict() # store events by line-no.
+        
+        self.live_map = None # set by Event
+        self.previous_map = None # set by action
+        self.previous_action = None # set by action
 
         self.generated = [] # store converted text from events.
 
@@ -169,9 +173,14 @@ class Module(PyObject):
         Create the new <NF>_linking.cpp file in gx.output_dir
         '''
         for event in self.events.values():
-            event.emit()
+            event.emit(self) # pass module for access to live_map
             self.generated.extend(event.generated) # contains all event text.
             self.generated += "\n\n"
+
+            # reset
+            self.live_map = None
+            self.previous_map = None
+            self.previous_action = None
 
 
         file = self.gx.output_dir / f"{self.gx.nf_name}_linking.cpp"
@@ -257,7 +266,7 @@ class Event:
         self.indent = 0
 
 
-    def emit(self):
+    def emit(self, module):
         # get function header
         _event_decl = self.decl
         self.generated.append(_event_decl + " {\n")
@@ -269,10 +278,24 @@ class Event:
                 self.generated.append(action.indent * "\t")
             except:
                 pass
-            action.emit()
-            # action exits is an inaccurate way to track if-exits.
+            
+            action.emit(module)
+
+            if action.name == "STORE" or action.name == "LOOKUP":
+                if action.name == "STORE":
+                    _map = action.vars[0]
+                elif action.name == "LOOKUP":
+                    _map = action.vars[1]
+                module.live_map = _map
+
+                if module.previous_action.name == "STORE" or module.previous_action.name =="LOOKUP":
+                    if module.previous_map and (module.live_map.name != module.previous_map.name):
+                        self.generated.append("\npthread_mutex_unlock(&" + _map.name + "_lock);\n")
+
             self.generated.append(action.generated + action.exits* "\t" + action.exits * "}" + "\n")
-        
+
+            module.previous_action = action
+
         self.generated.append("}")
 
 class Action:
@@ -289,7 +312,7 @@ class Action:
         self.exits = 0 # scope exits
         self.generated = ""
 
-    def emit(self):
+    def emit(self, module):
         '''
         C++ code generation, unique per action.
         '''
@@ -298,11 +321,13 @@ class Action:
         }
         print(self.name.lower())
         if self.name.lower() in emitters:
-            emitters[self.name.lower()]()
+            emitters[self.name.lower()](module)
         else:
             error.error(f"Action {self.name} not supported yet.")
+        
+        #module.previous_action = self
 
-    def emit_create_message(self):
+    def emit_create_message(self, module):
         _type = self.vars[0].type
         _id = self.vars[0].name
 
@@ -312,7 +337,7 @@ class Action:
             _sz = self.vars[0].type.sz
             self.generated += _type.to_str() + " " + _id + "[" + _sz + "];"
         
-    def emit_decode(self):
+    def emit_decode(self, module):
         # arg[1] is the deserialised ident.
         _body_id = self.vars[1].name
         _type = self.vars[1].type
@@ -329,7 +354,7 @@ class Action:
 
         self.generated += _args + ");\n"                
 
-    def emit_encode(self):
+    def emit_encode(self, module):
         # decl size and buffer.
         # size_t simple_enc_sz {};
         # std::vector<char> simple_enc(MAX_MESSAGE_SIZE, 0);
@@ -353,7 +378,7 @@ class Action:
         self.generated += _args + ");\n"
         
 
-    def emit_udf(self):
+    def emit_udf(self, module):
         # declare all undeclared args
         for _arg in self.vars[2:]:
             if "MACRO" in _arg.name:
@@ -380,7 +405,7 @@ class Action:
 
         self.generated += ");\n"
 
-    def emit_set(self):
+    def emit_set(self, module):
         '''
         undecl, decl set according to path taken by
         infer.get_variable()
@@ -403,24 +428,24 @@ class Action:
             else:
                 self.generated += _lhs.name + " = " + _rhs.name + ";\n"
 
-    def emit_get_key(self):
+    def emit_get_key(self, module):
         _id = self.vars[0].name
         _type = self.vars[0].type
 
         self.generated += _type.to_str() + " " + _id + " = " + "fd_to_key_map[sockfd];\n"
         
-    def emit_set_key(self):
+    def emit_set_key(self, module):
         _key = self.vars[0].name
 
         self.generated += "key_to_fd_map" + "[" + _key + "]" + " = sockfd;\n"
 
-    def emit_append(self):
+    def emit_append(self, module):
         _container = self.vars[0].seq_alias
         _to_add = self.vars[1]
         if _container.type.asn_seq:
             self.generated += "ASN_SEQUENCE_ADD(&" + _container.name + ", &" + _to_add.name + ");\n"
         
-    def emit_call(self):
+    def emit_call(self, module):
         _event = self.vars[0].name 
 
         self.generated += _event + "("
@@ -434,16 +459,43 @@ class Action:
         self.generated += _args + ");\n"
         
 
-    def emit_store(self):
+    def emit_store(self, module):
+        # do stuff
+        # ....
+        # p_m_l
+        assert(module.live_map)
+
+        # when prev action  = none and previous, live map = none
+        try:
+            if module.previous_action == "STORE" or module.previous_action == "LOOKUP":
+                assert(module.previous_map)
+                if module.live_map.name != module.previous_map.name:
+                    self.generated += "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
+                else:
+                    pass
+
+        except AttributeError as a:
+            # no previous action - first in event
+            assert(not module.previous_map)
+            assert(not module.live_map)
+            self.generated += "pthread_mutex_lock(&" + module.live_map.name + "_lock);\n"
+        
+        _map = module.live_map
+        _key = self.vars[1]
+        _attr = self.vars[2]
+        _attr_val = self.vars[3]
+
+        self.generated += self.indent * "\t" + _map.name + "[" + _key.name + "]." + _attr.name + " = " + _attr_val.name + ";\n" 
+        
+        module.previous_map = _map
+
+    def emit_lookup(self, module):
         pass
 
-    def emit_lookup(self):
+    def emit_send(self, module):
         pass
 
-    def emit_send(self):
-        pass
-
-    def emit_loop(self):
+    def emit_loop(self, module):
         self.generated += "for ("
         print(self.vars)
         _itr = self.vars[0]
@@ -454,7 +506,7 @@ class Action:
         self.generated += _itr.name + " < " + _high.name + "; "
         self.generated += _itr.name + "++) {\n"
     
-    def emit_if(self):
+    def emit_if(self, module):
         '''
         cond
         '''
@@ -484,20 +536,20 @@ class Action:
         self.generated += cond
         self.generated += ") {\n"
 
-    def emit_else(self):
+    def emit_else(self, module):
         self.generated += "else { \n"
         pass
 
-    def emit_read_config(self):
+    def emit_read_config(self, module):
         pass
 
-    def emit_break(self):
+    def emit_break(self, module):
         self.generated += "break;\n"
 
-    def emit_continue(self):
+    def emit_continue(self, module):
         self.generated += "continue'\n"
 
-    def emit_pass(self):
+    def emit_pass(self, module):
         self.generated += ";\n"
 
 
