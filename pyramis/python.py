@@ -554,8 +554,9 @@ class Action:
         module.previous_map = _map
 
     def emit_send(self, module):
-        pass
-
+        _args = ", ".join(self.vars)
+        self.generated += "send_data(" + _args + ");\n"
+        
     def emit_loop(self, module):
         self.generated += "for ("
         print(self.vars)

@@ -636,28 +636,45 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 # if args[-1] == NULL : 
                 #   # store that variable in .vars, later get val from fd_to_key_map
                 #  else:
-                #     # only pass the the procedure_key
-                # procedure key is defined as the ident passed to the keygen UDF
-                # _this_inf = args[1].value
-                # _peer_nf = args[2].value
-                # _receiving_interface = args[3]
-                # try:
-                #     _callback = args[4]
-                # except IndexError:
-                #     _callback = None
+                #     # only pass the the procedure_key 
+                #procedure key is defined as the ident passed to the keygen UDF
+                _this_inf = args[1].value
+                _peer_nf = args[2].value
+                _receiving_interface = args[3].value
+                try:
+                    _callback = args[4].value
+                except IndexError:
+                    _callback = None
 
-                # this_interface = self.gx.interfaces[_this_inf]
-                # peer_interface = self.gx.peer_interfaces[_peer_nf]
-                # # print(self.gx.interfaces)
+                this_interface = self.gx.interfaces[_this_inf] # returns utils.Interface
+                peer_interface = self.gx.other_nf_interfaces[_peer_nf][_receiving_interface]
+                # print(self.gx.interfaces)
 
-                # # for iface in this_interface.peer_nodes:
-                # #     print(iface)
-                # #assert(0)
-                # _peer_ip = peer_interface.ip
-                # _peer_port = peer_interface.port
-                # _msg = args[0]
-                # _conn_type = 0
+                # for iface in this_interface.peer_nodes:
+                #     print(iface)
+                #assert(0)
+                _peer_ip = "\"" + peer_interface.ip + "\""
+                _peer_port = peer_interface.port
+                _msg = args[0].value + "_enc"
+                _conn_type = peer_interface.conn_type
+                _protocol = peer_interface.transport_protocol # same as sending if protocol.
+                _peer_node = _peer_nf
+                _len = "length" # XXX dubious. 
 
+                if not _callback:
+                    # sending a response. get fd
+                    # from key_to_fd_map
+                    # else
+                    # send via sockfd.
+                    _key_or_fd = "key_to_fd_map[procedure_key]"
+                    _callback = "NULL"
+                else:
+                    _key_or_fd = "procedure_key"
+                
+                args = [str(_peer_ip), str(_peer_port), _msg, _conn_type, _protocol, _peer_node, _len, _key_or_fd, _callback]
+                
+                action.vars.extend(args)
+                
             case "TIMER_STOP":
                 pass
 

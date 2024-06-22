@@ -81,7 +81,7 @@ class GlobalInfo:
         self.pyramis_base_types = None
         self.user_base_types = None
         self.interfaces = {}
-        self.peer_interfaces = {}
+        self.other_nf_interfaces = {}
 
         # codegen
         self.all_events = set()
@@ -169,19 +169,26 @@ class GlobalInfo:
 
         self.interfaces_path = _in
         with open(self.interfaces_path, "r") as f_interfaces_r:
-            interfaces = json.load(f_interfaces_r)
-            assert(isinstance(interfaces, dict))
+            arch = json.load(f_interfaces_r)
+            assert(isinstance(arch, dict))
 
-            for node in interfaces:
-                _interfaces = interfaces[node]["Interfaces"] # list of interfaces
+            for node in arch:
+                _interfaces = arch[node]["Interfaces"] # list of interfaces
                 if node == self.nf_name:
-                    # own node
+                    # own nf interfaces
                     for _interface in _interfaces:
-                        self.interfaces[node] = utils.Interface(_interface)
+                        # {<interface_name>: utils.Interface}
+                        inf = _interface["Name"]
+                        self.interfaces[inf] = utils.Interface(_interface)
                 else:
-                    # peer_node
-                    self.peer_interfaces[node] = utils.Interface(_interface)
-
+                    # other nfs in the architecture, need not be peers.
+                    # peer is specifically for the nodes connected to
+                    # the current node.
+                    # {<nf_name>: {<interface_name>: utils.Interface}}
+                    for _interface in _interfaces:
+                        self.other_nf_interfaces[node] = {_interface["Name"]: utils.Interface(_interface)}
+            print(self.other_nf_interfaces)
+            print(self.interfaces)
         # node never == nf_name
         if not self.interfaces:
             error.error("Node name mismatch (cmdline and interfaces.json). Please fix")
