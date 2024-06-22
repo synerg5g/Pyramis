@@ -638,25 +638,25 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 #  else:
                 #     # only pass the the procedure_key
                 # procedure key is defined as the ident passed to the keygen UDF
-                _this_nf = args[1]
-                _peer_nf = args[2]
-                _receiving_interface = args[3]
-                try:
-                    _callback = args[4]
-                except IndexError:
-                    _callback = None
+                # _this_inf = args[1].value
+                # _peer_nf = args[2].value
+                # _receiving_interface = args[3]
+                # try:
+                #     _callback = args[4]
+                # except IndexError:
+                #     _callback = None
 
-                this_interface = self.gx.interfaces[_this_nf]
-                peer_interface = self.gx.peer_interfaces[_peer_nf]
-                # print(self.gx.interfaces)
+                # this_interface = self.gx.interfaces[_this_inf]
+                # peer_interface = self.gx.peer_interfaces[_peer_nf]
+                # # print(self.gx.interfaces)
 
-                # for iface in this_interface.peer_nodes:
-                #     print(iface)
-                assert(0)
-                _peer_ip = peer_interface.ip
-                _peer_port = peer_interface.port
-                _msg = args[0]
-                _conn_type = 
+                # # for iface in this_interface.peer_nodes:
+                # #     print(iface)
+                # #assert(0)
+                # _peer_ip = peer_interface.ip
+                # _peer_port = peer_interface.port
+                # _msg = args[0]
+                # _conn_type = 0
 
             case "TIMER_STOP":
                 pass
@@ -729,9 +729,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         for child in node.body:
             self.visit(child, node, indent, _last_else_action) # parent of all these children will be an ast.IF
         print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
-        self.live_action.exits += 1 # mark
-
+        
         if node.orelse:
+            self.live_action.exits += 1 
             indent -= 1
             action_ = python.Action(self.gx, "ELSE", action, indent - 1, self)
             self.live_event.actions.append(action_)
@@ -750,7 +750,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 # self.live_event.actions.append(action_)
                 # indent += 1
                 self.visit(child, node, indent, last.value)
-        #self.live_action.exits += 1 
+        self.live_action.exits += 1 
         
         infer.exit_live_scope(self)
         
