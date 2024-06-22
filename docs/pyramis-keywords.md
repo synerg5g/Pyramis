@@ -120,13 +120,15 @@ GET_KEY(__ident)
 # procedure key __key
 SET_KEY(__key)
 
-# Send the message __message via own interface __sending_interface to
+# Send the message in buffer __message_buffer via own interface __sending_interface to
 # peer __peer_nf_name at its interface __receiving_interface.
 #
 # __callback, if specified, registers the event to be called on receipt of
-# response to __message from the peer.
+# response to sending the message in __message_buffer from the peer.
 # If not specified, implies that __message was a response to a previous request
-SEND(__message, __sending_interface, __peer_nf_name, __receiving_interface, [__callback])
+#
+# SEND must always follow an ENCODE
+SEND(__message_buffer, __sending_interface, __peer_nf_name, __receiving_interface, [__callback])
 ```
 
 #### Special Actions
