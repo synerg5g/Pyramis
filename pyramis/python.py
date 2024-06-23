@@ -131,16 +131,19 @@ class Module(PyObject):
             _event_decl = "void " + _name + "("
 
             if any(action.name == "DECODE" for action in event.actions):
-                _defaults = "int length, int sockfd, struct nfvInstanceData *nfvInst"
+                decl_defaults = "int length, int sockfd, struct nfvInstanceData *nfvInst"
+                call_defaults = "length, sockfd, nfvInst"
             else:
-                _defaults = "int sockfd, struct nfvInstanceData *nfvInst"
+                decl_defaults = "int sockfd, struct nfvInstanceData *nfvInst"
+                call_defaults = "sockfd, nfvInst"
 
             _user = ""
             for v in event.vars:
                 _user += v.type_to_str() + " " + v.name + ", "
         
-            _event_decl += (_user + _defaults) + ")"
+            _event_decl += (_user + decl_defaults) + ")"
             event.decl += _event_decl # assign to event.
+            event.call_defaults += call_defaults
 
             self.generated.append(_event_decl + ";\n")
         
@@ -266,6 +269,7 @@ class Event:
 
         self.generated = [] # emit appends string lines.
         self.decl = "" # declaration/ header
+        self.call_defaults = ""
         self.indent = 0
 
 
@@ -478,7 +482,19 @@ class Action:
         for _arg in self.vars[1:]:
             _id = _arg.name
             _args += _id + ", "
-        _args = _args[:-2]
+
+        # add defaults acc to event
+        for _ev in module.events.values():
+            if _ev.name == _event:
+                event = _ev
+                break
+        if not event:
+            # invalid event was called
+            error.error("Called invalid event.")
+
+        _defaults = event.call_defaults
+        _args += _defaults
+        print(_args)
 
         self.generated += _args + ");\n"
         
