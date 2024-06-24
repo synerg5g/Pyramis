@@ -614,7 +614,12 @@ class Interface:
         
     def get_peer_ip(self, peer_name):
         assert(self.is_peer_node(peer_name))
-        
+
+
+class Timer:
+    def __init__(self, timer_dict):
+        self.type = timer_dict["Type"]
+        self.callback = timer_dict["Callback"]
         
 # ideally, an If parse should generate a list of 
 # Conditions as objects.

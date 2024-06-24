@@ -87,7 +87,7 @@ class GlobalInfo:
         self.all_events = set()
         self.allvars = set()
         self.maps = {} # name: python.Map()
-        self.timers = [] # timer classes with args. Used to create the expiry_context struct in platform.h
+        self.timers = {} # timer configs from interfaces.json
 
         self.type_cache = {} # built Python.types
         
@@ -174,21 +174,32 @@ class GlobalInfo:
 
             for node in arch:
                 _interfaces = arch[node]["Interfaces"] # list of interfaces
+                try:
+                    _timers = arch[node]["Timers"]
+                except KeyError as k:
+                    _timers = []
                 if node == self.nf_name:
                     # own nf interfaces
                     for _interface in _interfaces:
                         # {<interface_name>: utils.Interface}
                         inf = _interface["Name"]
                         self.interfaces[inf] = utils.Interface(_interface)
+                    
+                    for _timer in _timers:
+                        _type = _timer["Type"]
+                        self.timers[_type] = utils.Timer(_timer)
+
                 else:
                     # other nfs in the architecture, need not be peers.
                     # peer is specifically for the nodes connected to
                     # the current node.
                     # {<nf_name>: {<interface_name>: utils.Interface}}
+                    print("here")
                     for _interface in _interfaces:
                         self.other_nf_interfaces[node] = {_interface["Name"]: utils.Interface(_interface)}
             print(self.other_nf_interfaces)
             print(self.interfaces)
+            print(self.timers)
         # node never == nf_name
         if not self.interfaces:
             error.error("Node name mismatch (cmdline and interfaces.json). Please fix")
