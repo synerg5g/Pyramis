@@ -571,7 +571,7 @@ class Action:
 
     def emit_send(self, module):
         _args = ", ".join(self.vars)
-        self.generated += "send_data(" + _args + ");\n"
+        self.generated += "send_data(" + _args + ", nfvInst" +  ");\n"
         
     def emit_loop(self, module):
         self.generated += "for ("
@@ -636,6 +636,7 @@ class UserDefined:
         self.name = name
         self.arg_types = [] # list of python types?
         self.ret_type = ret_type
+        self.is_keygen = False
 
 class Variable:
     '''

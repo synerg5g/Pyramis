@@ -71,6 +71,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         self.module = module
         self.gx = gx # ref to global translator state
         self.funcs = {} # name: Function
+        self.keygen = None # one Var per module.
 
         self.events = {}
         self.calls = {} # history of CALLed python.Actions
@@ -333,6 +334,10 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 ret_v = infer.get_variable(self, 0, ret, action)
                 if not ret_v.type:
                     ret_v.type = udf.ret_type
+
+                if udf.is_keygen:
+                    self.module.keygen = ret_v
+
                 action.vars.append(ret_v)
                 action.vars.append(udf_name)
 

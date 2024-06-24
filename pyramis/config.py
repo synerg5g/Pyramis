@@ -207,18 +207,18 @@ class GlobalInfo:
         self.udfs_path = _in
         encoder = False
         decoder = False
-        for_type = None
+        keygen = False
         with open(self.udfs_path, "r") as f_in:
             for _, line in enumerate(f_in, start=1):
                 # skip comments
                 if line.startswith("//@@encoder"):
                     encoder=True
-                    for_type = line.split(":")[-1].strip()
                     continue
                 elif line.startswith("//@@decoder"):
                     decoder = True
-                    for_type = line.split(":")[-1].strip()
                     continue
+                elif line.startswith("//@@keygen"):
+                    keygen = True
                 if line.isspace():
                     continue
                 # * <*>(*)
@@ -275,9 +275,12 @@ class GlobalInfo:
                     if encoder:
                         self.encoders[_func] = udf
                         encoder = False
-                    if decoder:
+                    elif decoder:
                         self.decoders[_func] = udf
-                        decoder = False
+                        decoder = False 
+                    elif keygen:
+                        udf.is_keygen = True
+                        keygen = False
                     self.udfs[udf.name] = udf
 
         # print(f"Parsed {len(self.udfs)} udfs.")
