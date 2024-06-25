@@ -94,6 +94,7 @@ class Module(PyObject):
         self.node = node 
 
         self.events = collections.OrderedDict() # store events by line-no.
+        self.procedure_key = Variable()
         
         self.live_map = None # set by Event
         self.previous_map = None # set by action
@@ -245,6 +246,22 @@ class Module(PyObject):
             
         file = self.gx.output_dir / f"{self.gx.nf_name}_contexts.h"
         self.write_to_file(file)
+
+
+    def generate_platform_h(self):
+        # gen include headers
+
+        # gen timer_types enum
+
+        # gen timer context structs from gx.timer_contexts
+
+        # gen timer_expiry_context VARIANT. (see demos/variant.cpp)
+
+        # gen the rest of platform files from template.
+        pass
+
+    def generate_platform_cpp(self):
+        pass
 
     def write_to_file(self, filepath):
         '''Called by the generate_* methods at end.'''
@@ -452,7 +469,10 @@ class Action:
         elif not _lhs.undecl: # dotted always undecl = False
             if _rhs.type.thing == utils.TH_ARRAY:
                 # memcpy
-                self.generated += "memcpy(" + _lhs.name + ", " + _rhs.name + ".data(), " + _rhs.name + ".size());\n"
+                if _lhs.in_timer_ctx:
+                    self.generated += _lhs.name + " = " + _rhs.name + ";\n"
+                else:
+                    self.generated += "memcpy(" + _lhs.name + ", " + _rhs.name + ".data(), " + _rhs.name + ".size());\n"
             else:
                 self.generated += _lhs.name + " = " + _rhs.name + ";\n"
 
@@ -630,6 +650,15 @@ class Action:
     def emit_pass(self, module):
         self.generated += ";\n"
 
+    def emit_create_timer_context(self, module):
+        self.generated += "//timer context bc\n"
+
+    def emit_timer_start(self, module):
+        self.generated += "//timer_start bc\n"
+
+    def emit_timer_stop(self, module):
+        self.generated += "timer_stop_bc\n"
+
 
 class UserDefined:
     def __init__(self, name, ret_type):
@@ -646,7 +675,7 @@ class Variable:
     --> in this case, self.possible_types must be list.
     3. self.type == python.Type() only if a concrete type has been assigned to the ident.
     '''
-    def __init__(self, arg_idx, name, parent, type=None, undecl = False):
+    def __init__(self, arg_idx=None, name=None, parent=None, type=None, undecl = False):
         self.arg_idx = arg_idx
         self.name = name
 
@@ -655,6 +684,7 @@ class Variable:
         self.formal_arg = False
         self.seq_alias = None
         self.undecl = undecl
+        self.in_timer_ctx = False
 
         # assign self.type from somewhere.
         if isinstance(type, list):

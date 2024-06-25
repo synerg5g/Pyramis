@@ -620,6 +620,25 @@ class Timer:
     def __init__(self, timer_dict):
         self.type = timer_dict["Type"]
         self.callback = timer_dict["Callback"]
+
+class TimerCtx:
+    '''
+    On CREATE_TIMER_CONTEXT(__id, __timer_type),
+    create a TimerCtx and add it to the gx.timer_ctx map
+    - timer_contexts map is used during generic_timer_stop
+    codegen to get _id i.e. ctx.{self.gx.timer_ctx[timer_type]._id}.procedure_key
+    - generic_timer_stop will find the fdData struct corresp. to a
+    procedure_key and timer_type. 
+    `TIMER_STOP(__timer_type)`
+    `TIMER_START(__timer_type, __timeout, __timer_ctx, __callback`)
+    - timer context must be created before starting a timer.
+    '''
+    def __init__(self, _id, _type):
+        self._id = _id # t1, t2 etc
+        self._type = _type
+        self._name = "timer_expiry_context_" + _type + "_t"
+        self._callback = None # should be a ref to python.Event.
+        self.attrs = {} # name : python.Variable(), filled by SET.
         
 # ideally, an If parse should generate a list of 
 # Conditions as objects.
@@ -743,8 +762,9 @@ PYRAMIS_ACTIONS = [
     "PASS" ,       # XXX dubious
     "BREAK",       # XXX dubious
     "CONTINUE" ,    # XXX dubious
+    "CREATE_TIMER_CONTEXT",
     #"TIMER_STOP",
-    #"TIMER_START"
+    "TIMER_START"
 ]
 
 class Preprocessor:

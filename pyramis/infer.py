@@ -204,7 +204,10 @@ def get_variable(mv, arg_idx, ident, parent):
                     # code-gen for set/udf asString()
                     final_t = python.Type("json") 
                 # print(f"Type of root {root} is {var.type}")
-                final_t = var.type.get_typeof(stem)
+                elif "timer_expiry_context" in var.type.ident:
+                    final_t =  None # just the root type, even if stem is being accessed.
+                else:
+                    final_t = var.type.get_typeof(stem)
                 # print(f"Type of stem {stem} is {fi    nal_t}")
                 return python.Variable(arg_idx, ident, parent, final_t)
             else:
@@ -299,6 +302,9 @@ def type_from_type_str(gx, arg, usage_indirection=None):
         return python.Type(_tp_name, utils.TH_ARRAY, usage_indirection)
 
     if arg in C_TYPES:
+        return python.Type(arg, indirection=usage_indirection)
+    
+    if "timer_expiry_context" in arg:
         return python.Type(arg, indirection=usage_indirection)
 
     # first check in user types

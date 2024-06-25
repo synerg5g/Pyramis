@@ -87,7 +87,14 @@ class GlobalInfo:
         self.all_events = set()
         self.allvars = set()
         self.maps = {} # name: python.Map()
-        self.timers = {} # timer configs from interfaces.json
+        self.timers = {} # timer configs from interfaces.json. Used to create the enum _e_timerType.
+        
+        # used to generate the timer_ctx structs 
+        # __id used to access attributes in the timer
+        # callback events.
+        #
+        # num ctx = num timer_types.
+        self.timer_contexts = {} # from CREATE_TIMER_CONTEXT. {_TimerType: utils.Struct}.
 
         self.type_cache = {} # built Python.types
         

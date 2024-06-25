@@ -330,15 +330,16 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 udf_name = args[1].value
                 udf = self.gx.get_udf(udf_name)
 
-                ret = args[0].value
-                ret_v = infer.get_variable(self, 0, ret, action)
-                if not ret_v.type:
-                    ret_v.type = udf.ret_type
+                ret_id = args[0].value # name
+                ret_id_v = infer.get_variable(self, 0, ret_id, action)
+                if not ret_id_v.type:
+                    ret_id_v.type = udf.ret_type
 
                 if udf.is_keygen:
-                    self.module.keygen = ret_v
+                    self.module.procedure_key.name = ret_id_v.name
+                    self.module.procedure_key.type = ret_id_v.type
 
-                action.vars.append(ret_v)
+                action.vars.append(ret_id_v)
                 action.vars.append(udf_name)
 
                 # print([v.value for v in args[2:]])
@@ -382,19 +383,42 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             assert(typed[0].type.equals(typed[1].type)) 
 
                     elif not var.type:
+                        # always here for timer_ctx.
                         # print(f"Attempt to copy lhs type to rhs, {_v.value}")
                         untyped.append(var)
                         if len(typed) == 1:
-                            var.type = typed[0].type
+                            var.type = typed[0].type # t1.user_id == std::string.
 
                         if len(untyped) == 2:
                             # assigning unknown to unknown
                             print([v.name for v in untyped])
-
-                        
+                    
+                    
                     action.vars.append(var)
                     print(f"var: {var.name}, undecl = {var.undecl}")
                     infer.add_var_to_live_scope(self, var)
+                
+                # check for timer
+                for var in action.vars:
+                    _root = var.name.split(".")[0]
+                    if _root != var.name:
+                        _root_var = infer.get_variable(self, 3, _root, action)
+                        if "timer_expiry_context" in _root_var.type.ident:
+                            var.in_timer_ctx = True # lhs var is in timer_ctx
+                            # create a variable for the stem.
+                            # with type = that of the dotted ident
+                            _stem = var.name.split(".")[-1]
+                            _type = var.type
+                            stem_var = python.Variable(3, _stem, action, _type)
+
+                            # add the var to the timer_ctx.
+                            # -- find the timer_ctx
+                            for ctx in self.gx.timer_contexts.values():
+                                if ctx._id == _root: # _id must be unique across events.
+                                    ctx.attrs[_stem] = stem_var
+                                    break
+                            print("set timer_ctx")
+                            print([ctx.attrs for ctx in self.gx.timer_contexts.values()])
 
             case "GET_KEY": # try get_procedure_key
                 '''
@@ -679,11 +703,78 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 args = [str(_peer_ip), str(_peer_port), _msg, _conn_type, _protocol, _peer_node, _len, _key_or_fd, _callback]
                 
                 action.vars.extend(args)
-                
-            case "TIMER_STOP":
-                pass
+            
+            case "CREATE_TIMER_CONTEXT":
+                '''
+                CREATE_TIMER_CONTEXT(__id, __timer_type) -->
+                '''
+                # create the timer_ctx.
+                _id = args[0].value
+                _t_type = args[1].value
+
+                if "MACRO" in _t_type:
+                    print(_t_type)
+                    _t_type = _t_type.split("(")[1]
+
+                ctx = utils.TimerCtx(_id, _t_type)
+
+                # add ctx to map
+                self.gx.timer_contexts[_t_type] = ctx
+
+                # create python.Variable for the id.
+                _type = infer.type_from_type_str(self.gx, ctx._name) # _name is the struct name.
+                var = python.Variable(0, _id, action, _type)
+
+                # add to scope
+                infer.add_var_to_live_scope(self, var)
+
+                print("timer_ctx abbe")
+
+                print(f"{var.type.ident}")
 
             case "TIMER_START":
+                '''
+                TIMER_START (__timer_type, __timeout, __expiry_context, __callback)
+                --> timerfdd = generic_timer_start(__timer_type, __timeout, __expiry_context, &__callback, nfvInst)
+                --> b. timerfdd.timerCB = &__callback;
+                --> c. timerfdd.ctx = <__expiry_context ka type>{__expiry_context}
+                
+                // all autogen.
+                fdData_t g_t_s(...) {
+                    // create timerfdd, add to epoll, return timerfdd.
+                }
+                '''
+                print("timer_start")
+                _timer_type = args[0].value
+
+                if "MACRO" in _timer_type:
+                    _timer_type = _timer_type.split("(")[1]
+                    print(_timer_type)
+
+            case "TIMER_STOP":
+                '''
+                TIMER_STOP(__timer_type)
+                ---> a. find the timerfdd
+                FindIf based on procedure_key and timer_type.
+                ```
+                    const auto it = std::find_if(
+                    nfvInst->fd_map.begin(),
+                    nfvInst->fd_map.end(), 
+                    [&procedure_key, &timer_type](const auto &fd_map_entry) { return (fd_map_entry.second.timer_ctx.timer_id == timer_id
+                    && fd_map_entry.second.timer_ctx.user_id == userID); } // requires g++ -std=c++17. if using insert to insert values into map.
+                    );
+
+                    if (it != nfvInst->fd_map.end()) {
+                        auto timer_fdd = it->second
+                        generic_timer_stop(timer_fdd, nfvInst)}
+
+                ---> b. generic_timer_stop(__timer_type, __timer_fdd)
+
+                void generic_timer_stop() {
+                    // close tfd.
+                    // all autogen    
+                }
+                '''
                 pass
 
         # add action to live event, 
