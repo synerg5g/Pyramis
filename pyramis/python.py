@@ -273,6 +273,16 @@ class Module(PyObject):
         _includes += "\n"
         self.generated.append(_includes)
 
+        # gen node enum
+        _nodes = ""
+        _nodes += "typedef enum Node {\n"
+        _nodes += "\t" + self.gx.nf_name + ",\n"
+        for nf in self.gx.other_nf_interfaces:
+            _nodes += "\t" + nf + ", \n"
+        _nodes += "} _e_nfv_node;"
+
+        self.generated.append(_nodes + "\n\n")
+
         # gen timer_types enum
         _timer_types = ""
         _timer_types += "typedef enum TimerType: std::uint8_t {\n"
@@ -317,9 +327,11 @@ class Module(PyObject):
 
         file = self.gx.output_dir / f"{self.gx.nf_name}_platform.h"
         self.write_to_file(file)
-        assert(0)
 
     def generate_platform_cpp(self):
+        pass
+
+    def generate_makefile(self):
         pass
 
     def write_to_file(self, filepath):
@@ -718,7 +730,15 @@ class Action:
         self.generated += self.indent * "\t" + _id + ".procedure_key" + " = " + module.procedure_key.name + ";\n"
 
     def emit_timer_start(self, module):
-        self.generated += "//timer_start bc\n"
+        self.vars[-1] = "&" + self.vars[-1] # callback
+        print(self.vars)
+        _timer_type, _timeout, _ctx, _callback = self.vars
+        _args = ", ".join(self.vars)
+
+        self.generated += "fdData_t timerfdd = " + "generic_timer_start(" + _args + ");\n"
+
+        self.generated += self.indent * "\t" + "timerfdd.timerCB = " + _callback + ";\n"
+        self.generated += self.indent * "\t" + "timerfdd.ctx = " + _ctx +";\n"
 
     def emit_timer_stop(self, module):
         self.generated += "timer_stop_bc\n"

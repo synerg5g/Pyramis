@@ -752,13 +752,16 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 }
                 '''
                 print("timer_start")
-                _timer_type = args[0].value
+                _timer_type = args[0].value # enum
 
                 if "MACRO" in _timer_type:
-                    _timer_type = _timer_type.split("(")[1]
+                    _timer_type = _timer_type.split("(")[1][:-1]
                     print(_timer_type)
-
-
+                
+                _args = [_timer_type]
+                _args.extend([_arg.value for _arg in args[1:]])
+                action.vars.extend(_args) # all strs.
+             
             case "TIMER_STOP":
                 '''
                 TIMER_STOP(__timer_type)
