@@ -99,7 +99,7 @@ class GlobalInfo:
         self.type_cache = {} # built Python.types
         
         self.cwd = self.cwd = pathlib.Path.cwd() # directory that pyramis was called from
-        self.raw_dir = self.cwd / "__TRANSLATE_RAW__" / self.nf_name
+        self.error_dir = self.cwd / "errors" / self.nf_name
         self.build_dir = self.cwd/ "__BUILD__" / self.nf_name
         self.run_dir = self.cwd / "__RUN__" / self.nf_name
         self.output_dir = None
@@ -142,8 +142,8 @@ class GlobalInfo:
             error.error("Invalid UDF: `%s`. Check udf.h."%udf_name)
     
     def init_directories(self, args):
-        if args.subcmd == "translate":
-            self.output_dir = self.raw_dir
+        if args.subcmd == "analyze":
+            self.output_dir = self.error_dir
         elif args.subcmd == "build":
             self.output_dir = self.build_dir
         elif args.subcmd == "run":

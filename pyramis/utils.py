@@ -638,7 +638,7 @@ class TimerCtx:
         self._type = _type
         self._name = "timer_expiry_context_" + _type + "_t"
         self._callback = None # should be a ref to python.Event.
-        self.attrs = {} # name : python.Variable(), filled by SET.
+        self.attrs = [] # name : python.Variable(), filled by SET.
         
 # ideally, an If parse should generate a list of 
 # Conditions as objects.

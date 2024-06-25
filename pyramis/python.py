@@ -177,6 +177,15 @@ class Module(PyObject):
         Store lines in self.generated.
         Create the new <NF>_linking.cpp file in gx.output_dir
         '''
+
+        # header
+        _inc = [f"\"{self.gx.nf_name}_linking.h\""]
+        _includes = ""
+        for __inc in _inc:
+            _includes += "#include " + __inc + "\n"
+        _includes += "\n"
+        self.generated.append(_includes)
+
         for event in self.events.values():
             event.emit(self) # pass module for access to live_map
             self.generated.extend(event.generated) # contains all event text.
@@ -249,16 +258,66 @@ class Module(PyObject):
 
 
     def generate_platform_h(self):
+
+        _guard = "#ifndef __" + self.gx.nf_name + "_PLATFORM_H__\n"
+        _guard += "#define __" + self.gx.nf_name + "_PLATFORM_H__\n"
+        
+        self.generated.append(_guard)
+
         # gen include headers
+        _inc = ['<map>', '<set>', '<sys/timerfd.h>', '<sys/epoll.h>', '<unistd.h>', 
+                '<string.h>', '<iostream>', '<queue>', '<sys/eventfd.h>', '<variant>']
+        _includes = ""
+        for __inc in _inc:
+            _includes += "#include " + __inc + "\n"
+        _includes += "\n"
+        self.generated.append(_includes)
 
         # gen timer_types enum
+        _timer_types = ""
+        _timer_types += "typedef enum TimerType: std::uint8_t {\n"
+        for i, _timer_type in enumerate(self.gx.timers.keys()):
+            _timer_types += "\t" + _timer_type + " = " + str((i + 1)) + ",\n"
+        _timer_types += "} _e_TimerType;\n\n"
+        
+        self.generated.append(_timer_types)
 
         # gen timer context structs from gx.timer_contexts
+        print([ctx._name for ctx in self.gx.timer_contexts.values()])
+        _structs = ""
+        for ctx in self.gx.timer_contexts.values():
+            _struct = ""
+            _struct += "struct " + ctx._name + " {\n"
+            _struct += "\tint procedure_key;\n"
+            for _a in ctx.attrs[1:]:
+                _attr = ""
+                _attr += "\t" + _a.type.to_str() + " " + _a.name + ";\n"
+                _struct += _attr
+            _struct += "};\n"
+            _structs += _struct + "\n"
+        
+        self.generated.append(_structs)
+
 
         # gen timer_expiry_context VARIANT. (see demos/variant.cpp)
+        _variants = ""
+        _variants += "typedef std::variant<\n"
+        for ctx in self.gx.timer_contexts.values():
+            _timer_struct = ctx._name
+            _variants += "\t" + _timer_struct + ",\n"
+        _variants += "> timer_expiry_context_t;\n"
+
+        self.generated.append(_variants)
+
 
         # gen the rest of platform files from template.
-        pass
+        _rest = ""
+        
+        self.generated.append("#endif")
+
+        file = self.gx.output_dir / f"{self.gx.nf_name}_platform.h"
+        self.write_to_file(file)
+        assert(0)
 
     def generate_platform_cpp(self):
         pass
@@ -651,7 +710,12 @@ class Action:
         self.generated += ";\n"
 
     def emit_create_timer_context(self, module):
-        self.generated += "//timer context bc\n"
+        _type = self.vars[0].type
+        _id = self.vars[0].name
+
+        self.generated += _type.to_str() + " " + _id + "{};\n"
+
+        self.generated += self.indent * "\t" + _id + ".procedure_key" + " = " + module.procedure_key.name + ";\n"
 
     def emit_timer_start(self, module):
         self.generated += "//timer_start bc\n"

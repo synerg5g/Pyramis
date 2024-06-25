@@ -415,7 +415,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             # -- find the timer_ctx
                             for ctx in self.gx.timer_contexts.values():
                                 if ctx._id == _root: # _id must be unique across events.
-                                    ctx.attrs[_stem] = stem_var
+                                    ctx.attrs.append(stem_var)
                                     break
                             print("set timer_ctx")
                             print([ctx.attrs for ctx in self.gx.timer_contexts.values()])
@@ -725,8 +725,15 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 _type = infer.type_from_type_str(self.gx, ctx._name) # _name is the struct name.
                 var = python.Variable(0, _id, action, _type)
 
+                # add to action
+                action.vars.append(var)
+
                 # add to scope
                 infer.add_var_to_live_scope(self, var)
+
+                # add procedure_key to ctx attributes.
+                procedure_key = self.module.procedure_key # var
+                ctx.attrs.append(procedure_key)
 
                 print("timer_ctx abbe")
 
@@ -750,6 +757,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 if "MACRO" in _timer_type:
                     _timer_type = _timer_type.split("(")[1]
                     print(_timer_type)
+
 
             case "TIMER_STOP":
                 '''
