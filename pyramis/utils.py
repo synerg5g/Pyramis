@@ -605,6 +605,19 @@ class Interface:
         # peer nodes
         self.peer_nodes = interface_dict["PeerNodes"]
 
+    def make_ifv(self):
+        '''
+        (fdData_t){UDP_PROTOCOL_SERVER_ACCEPT_SOCKET, 5858,0,INADDR_NONE,SHORT}
+        '''
+        _ifv = ""
+        _ifv += "(fdData_t){"
+        _socket = self.transport_protocol + "_SERVER_ACCEPT_SOCKET"
+
+        _ifv += _socket + ", " + str(self.port) + ", 0, " + "INADDR_NONE, " + self.conn_type + "}"
+        print(_ifv)
+        return _ifv
+
+        
         
     def is_peer_node(self, maybe_peer_node):
         if maybe_peer_node in self.peers:

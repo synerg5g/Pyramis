@@ -336,6 +336,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     ret_id_v.type = udf.ret_type
 
                 if udf.is_keygen:
+                    action.is_keygen = True
                     self.module.procedure_key.name = ret_id_v.name
                     self.module.procedure_key.type = ret_id_v.type
 
@@ -684,23 +685,16 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 #assert(0)
                 _peer_ip = "\"" + peer_interface.ip + "\""
                 _peer_port = peer_interface.port
-                _msg = args[0].value + "_enc"
+                _msg_buf = args[0].value
                 _conn_type = peer_interface.conn_type
                 _protocol = peer_interface.transport_protocol # same as sending if protocol.
                 _peer_node = _peer_nf
                 _len = "length" # XXX dubious. 
 
                 if not _callback:
-                    # sending a response. get fd
-                    # from key_to_fd_map
-                    # else
-                    # send via sockfd.
-                    _key_or_fd = "key_to_fd_map[procedure_key]"
                     _callback = "NULL"
-                else:
-                    _key_or_fd = "procedure_key"
                 
-                args = [str(_peer_ip), str(_peer_port), _msg, _conn_type, _protocol, _peer_node, _len, _key_or_fd, _callback]
+                args = [str(_peer_ip), str(_peer_port), _msg_buf, _conn_type, _protocol, _peer_node, _len, _callback]
                 
                 action.vars.extend(args)
             

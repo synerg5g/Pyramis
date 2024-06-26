@@ -100,6 +100,7 @@ class Module(PyObject):
         self.previous_map = None # set by action
         self.previous_action = None # set by action
         self.mutex = False
+        self.locks = []
 
         self.generated = [] # store converted text from events.
 
@@ -118,7 +119,7 @@ class Module(PyObject):
         _guard += "#define __" + self.gx.nf_name + "_LINKING_H__\n"
         self.generated.append(_guard)
 
-        _inc = ["\"../../udf.h\"", f"\"{self.gx.nf_name}_platform.h\""]
+        _inc = ["\"../../udf.h\"", f"\"{self.gx.nf_name}_platform.h\"", f"\"{self.gx.nf_name}_contexts.h\""]
         _includes = ""
         for __inc in _inc:
             _includes += "#include " + __inc + "\n"
@@ -131,12 +132,17 @@ class Module(PyObject):
             _name = event.name
             _event_decl = "void " + _name + "("
 
-            if any(action.name == "DECODE" for action in event.actions):
-                decl_defaults = "int length, int sockfd, struct nfvInstanceData *nfvInst"
+            if any(action.name == "DECODE" for action in event.actions) or any(action.name == "SEND" for action in event.actions):
+                decl_defaults = "size_t length, int sockfd, struct nfvInstanceData *nfvInst"
                 call_defaults = "length, sockfd, nfvInst"
             else:
-                decl_defaults = "int sockfd, struct nfvInstanceData *nfvInst"
+                decl_defaults = "size_t sockfd, struct nfvInstanceData *nfvInst"
                 call_defaults = "sockfd, nfvInst"
+            
+            # if keygen udf not in actions, decl must have procedure_key
+            if not any(action.is_keygen for action in event.actions) and not any(v.name == self.procedure_key.name for v in event.vars):
+                decl_defaults += f", {self.procedure_key.type.to_str()} {self.procedure_key.name}"
+                call_defaults += f", {self.procedure_key.name}"
 
             _user = ""
             for v in event.vars:
@@ -250,6 +256,9 @@ class Module(PyObject):
             # declare map with key type and map struct
             _map += "std::map<" + map.key_type.to_str() + ", " + map.struct.name + "_t> " + map.name + " {};\n\n"
             self.generated.append(_map)
+
+            # locks used later.
+            self.locks.append(map.name + "_lock")
         
         self.generated.append("#endif")
             
@@ -273,13 +282,30 @@ class Module(PyObject):
         _includes += "\n"
         self.generated.append(_includes)
 
+        # gen constants
+        _const = [
+            'MAX_CONNECTIONS 1024',
+            'E_MAX_NFV_COMPONENTS 10',
+            'MAX_EPOLL_EVENTS E_MAX_NFV_COMPONENTS * MAX_CONNECTIONS',  # Keep the expression
+            'MAX_MESSAGE_SIZE 10000',
+            'LISTEN_QUEUE_BACKLOG 10',
+            'NON_UE_MESSAGE_STREAM 0',
+            'UE_MESSAGE_STREAM 1',
+            ]
+
+        _consts = ""
+        for _c in _const:
+            _consts += "#define " + _c + "\n"
+        _consts += "\n"
+        self.generated.append(_consts)
+
         # gen node enum
         _nodes = ""
-        _nodes += "typedef enum Node {\n"
+        _nodes += "typedef enum NFNode {\n"
         _nodes += "\t" + self.gx.nf_name + ",\n"
         for nf in self.gx.other_nf_interfaces:
             _nodes += "\t" + nf + ", \n"
-        _nodes += "} _e_nfv_node;"
+        _nodes += "} NODE;"
 
         self.generated.append(_nodes + "\n\n")
 
@@ -315,13 +341,18 @@ class Module(PyObject):
         for ctx in self.gx.timer_contexts.values():
             _timer_struct = ctx._name
             _variants += "\t" + _timer_struct + ",\n"
-        _variants += "> timer_expiry_context_t;\n"
+        _variants += "> timer_expiry_context_t;\n\n"
 
         self.generated.append(_variants)
 
 
         # gen the rest of platform files from template.
         _rest = ""
+        _file = self.gx._pyramis / "platform_h.txt"
+        with open(_file, "r") as _file_r:
+            _rest += _file_r.read()
+        _rest += "\n"
+        self.generated += _rest
         
         self.generated.append("#endif")
 
@@ -329,7 +360,77 @@ class Module(PyObject):
         self.write_to_file(file)
 
     def generate_platform_cpp(self):
-        pass
+        # generate includes
+        # gen include headers
+        _inc = [f'\"{self.gx.nf_name}_platform.h\"', f'\"{self.gx._utility_lib}/platform/include/logging.h\"',
+                '<vector>', '<pthread.h>', '<errno.h>', '<fcntl.h>', '<sys/socket.h>', '<netinet/sctp.h>',
+                '<arpa/inet.h>', '<netinet/in.h>']
+        _includes = ""
+        for __inc in _inc:
+            _includes += "#include " + __inc + "\n"
+        _includes += "\n"
+        self.generated.append(_includes)
+
+        # declare processing callbacks
+        async_callbacks = ""
+        for _inf in self.gx.interfaces.values():
+            for event in self.events.values():
+                print(event.name, *_inf.processing) # single callback for each interface.
+                _cb = _inf.processing[0]
+                if event.name == _cb:
+                    async_callbacks += event.decl + ";\n"
+        self.generated.append(async_callbacks + "\n")
+
+        # decl interface vector
+        _ifv = ""
+        _ifv += "std::vector<fdData_t> interfaceVector = {"
+        for _inf in self.gx.interfaces.values():
+            _ifv += _inf.make_ifv() + ", "
+        _ifv = _ifv[:-2] # remove last comma
+        _ifv += "};\n\n"
+        self.generated.append(_ifv)
+
+        # initialise user-locks
+        print(self.locks)
+        _locks = ""
+        for _lock in self.locks:
+            _locks += "pthread_mutex_t " + _lock + " = PTHREAD_MUTEX_INITIALIZER;\n"
+        _locks += "\n"
+        self.generated.append(_locks)
+
+        # transfer defaults from template.
+        _rest = ""
+        _file = self.gx._pyramis / "platform_cpp.txt"
+        with open(_file, "r") as _file_r:
+            _rest += _file_r.read()
+        _rest += "\n"
+        self.generated.append(_rest)
+
+        _main = ""
+        _main += "int main(int argc, const char *argv[]) {\n"
+
+        for _inf in self.gx.interfaces.values():
+            _register = ""
+            print(_inf.processing[0], self.events)
+            if _inf.processing[0] in [event.name for event in self.events.values()]:
+                _register += "\tport_request_handler_map[" + str(_inf.port) + "] = " + _inf.processing[0] + ";\n"
+            else:
+                print("WARNING: ... server entry callback is not defined.")
+            _main += _register
+        
+        self.generated.append(_main)
+
+        _footer = ""
+        _file = self.gx._pyramis / "platform_cpp_main_footer.txt"
+        with open(_file, "r") as _file_r:
+            _footer += _file_r.read()
+        _footer += "\n"
+        self.generated.append(_footer)
+
+
+        file = self.gx.output_dir / f"{self.gx.nf_name}_platform.cpp"
+        self.write_to_file(file)
+
 
     def generate_makefile(self):
         pass
@@ -426,6 +527,7 @@ class Action:
 
         self.indent = indent # update via modulevisitor.
         self.exits = 0 # scope exits
+        self.is_keygen = False # for keygen udf.
         self.generated = ""
 
     def emit(self, module):
@@ -661,7 +763,20 @@ class Action:
         module.previous_map = _map
 
     def emit_send(self, module):
-        _args = ", ".join(self.vars)
+        _callback = self.vars[-1]
+        if _callback == "NULL":
+            # sending a response. get fd
+            # from key_to_fd_map
+            # else
+            # send via sockfd.
+            _key_or_fd = f"key_to_fd_map[{module.procedure_key.name}]"
+            _callback = "NULL"
+        else:
+            _key_or_fd = module.procedure_key.name
+
+        _args = ", ".join(self.vars[:-1])
+        _args += ", " + _key_or_fd + ", " + _callback
+
         self.generated += "send_data(" + _args + ", nfvInst" +  ");\n"
         
     def emit_loop(self, module):
@@ -929,38 +1044,5 @@ class Type:
     #     for s, st in self.subs.items():
     #         _str += f"\t{s}: {str(st)}"
     #     return _str
-
-def main():
-    # primitive C++ types
-    # only these will have subs empty
-    int_t = Type("int", utils.TH_ARRAY)
-    float_t = Type("float")
-    str_t = Type("str")
-
-    # this type creation should be simulated by the 
-    # asn parser.
-    t1 = Type("nas_t")
-    t1.subs["sst"] = [int_t, float_t]
-    t1.subs["ssd"] = float_t
-    t2 = Type("secuheader_t") # type of an attribute of t1
-    t1.subs["shdr"] = t2
-    t2.subs["cipher"] = float_t
-    t2.subs["alg"] = str_t
-
-    # print(t1.contains("shdr"))
-    # print(t1.get_typeof("shdr").ident)
-
-    var = Variable("myvar", None, None)
-    var.type = t1
-    # print(var.contains("shdr"))
-    path = t1.path_to(utils.TH_ARRAY)
-    print(path)
-    # print(t1)
-    #print(t2)
-
-if __name__ == "__main__":
-    main()
-
-
 
     
