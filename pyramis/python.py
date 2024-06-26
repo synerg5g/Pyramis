@@ -267,14 +267,15 @@ class Module(PyObject):
 
 
     def generate_platform_h(self):
-
         _guard = "#ifndef __" + self.gx.nf_name + "_PLATFORM_H__\n"
         _guard += "#define __" + self.gx.nf_name + "_PLATFORM_H__\n"
         
-        self.generated.append(_guard)
+        #self.generated.append(_guard)
 
         # gen include headers
-        _inc = ['<map>', '<set>', '<sys/timerfd.h>', '<sys/epoll.h>', '<unistd.h>', 
+        # print(f'\"{self.gx.utility_lib}/common/include/datatypes.h\"')
+        _inc = [f'\"{self.gx.utility_lib}/common/include/datatypes.h\"', '<map>', '<set>', 
+                '<sys/timerfd.h>', '<sys/epoll.h>', '<unistd.h>', 
                 '<string.h>', '<iostream>', '<queue>', '<sys/eventfd.h>', '<variant>']
         _includes = ""
         for __inc in _inc:

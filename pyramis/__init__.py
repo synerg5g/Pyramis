@@ -9,7 +9,7 @@ import os
 import os.path
 import pathlib
 
-from . import log, config, utils, graph
+from . import log, config, utils, graph, python
 
 class Pyramis:
     def __init__(self, options, magic):
@@ -122,27 +122,6 @@ class Pyramis:
             translator.do_analyze()    # ast entry point, generate error report.
         
         if args.subcmd == "build":
-            # if translator.gx.raw_dir.is_dir():
-            #     # assert three files present
-            #     _required = [f"{translator.gx.nf_name}_linking.cpp", 
-            #                  f"{translator.gx.nf_name}_linking.h",
-            #                  f"{translator.gx.nf_name}_contexts.h"]
-            #     _missing = []
-            #     for file_name in _required:
-            #         if not translator.gx.raw_dir.joinpath(file_name).is_file():
-            #             _missing.append(file_name)
-
-            #     if _missing:
-            #         raise AssertionError(f"Missing required files in {translator.gx.raw_dir}: {', '.join(_missing)}")
-
-            #     # copy into self.gx.build_dir
-            #     for file in _required:
-            #         _in = translator.gx.raw_dir / file
-            #         _out = translator.gx.build_dir / file
-
-            #         with open(_in, "r") as f_in, open(_out, "w") as f_out:
-            #             data = f_in.read()
-            #             f_out.write(data)
             translator.do_analyze()
             
             translator.do_raw_translate()  # C++ code-generation
@@ -156,7 +135,9 @@ class Pyramis:
         # each module has an associated visitor.
         self.gx.py_module = graph.parse_module(self.gx)
     
-    def do_raw_translate(self):    
+    def do_raw_translate(self):
+        assert(isinstance(self.gx.py_module, python.Module))  
+
         # contexts
         self.gx.py_module.generate_contexts()
 
@@ -168,10 +149,10 @@ class Pyramis:
 
 
     def do_build(self):
-        # create platform file
-        self.gx.py_module.generate_platform_h()
+        # # create platform file
+        # self.gx.py_module.generate_platform_h()
 
-        self.gx.py_module.generate_platform_cpp()
+        # self.gx.py_module.generate_platform_cpp()
 
         # create makefile
         self.gx.py_module.generate_makefile()
