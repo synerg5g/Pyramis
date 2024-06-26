@@ -194,33 +194,53 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             getmv().events[node.name] = event
         
         self.live_event = event
-        # print("Old len: %s" %len(self.live_event.vars))
-        for i, _v in enumerate(self.live_event.formals):
-            var = infer.get_variable(self, i, _v, self.live_event)
-            if not var:
-                # search calls - it might be possible that a previous CALL
-                # occurred to this EVENT. 
-                if event.name in self.calls:
-                    call = self.calls[event.name]
-                    try:
-                        # 
-                        var = python.Variable(i, _v, self.live_event, call.vars[i + 1].type)
-                    except KeyError as k:
-                        # arg mismatch in call, error
-                        error.error("Insufficient arguments in previous CALL to event `%s`.\n" %call.name)
-                else:
-                    # first ever occurence of this EVENT name
-                    # just return untyped variables
-                    var = python.Variable(i, _v, self.live_event)
-            else:
-                # create and return untyped variable
-                assert(not var.type)
-                ## print(f"Impossible: Event variables cannot have been encountered before the event itself.")
-            
-            event.vars.append(var)
-            self.events[event.name] = event # event without actions
 
-            infer.add_var_to_live_scope(self, var)  # scope.symtab[j] = var(j) etc.
+        timer_cb = False
+        for timer in self.gx.timers.values():
+            if event.name == timer.callback:
+                timer_cb = True
+
+                _ctx_id = self.live_event.formals[0]
+                event.timer_type = timer.type
+
+                if not self.gx.timer_contexts[timer.type]:
+                    v_type = python.Type("timer_expiry_context_" + timer.type + "_t")
+                else:
+                    v_type = python.Type(self.gx.timer_contexts[timer.type]._name)
+
+                var = python.Variable(0, _ctx_id, event, v_type)
+                
+                event.vars.append(var)
+                infer.add_var_to_live_scope(self, var)
+                
+        if not timer_cb:
+            for i, _v in enumerate(self.live_event.formals):
+                var = infer.get_variable(self, i, _v, self.live_event)
+                if not var:
+                    # search calls - it might be possible that a previous CALL
+                    # occurred to this EVENT. 
+                    if event.name in self.calls:
+                        call = self.calls[event.name]
+                        try:
+                            # 
+                            var = python.Variable(i, _v, self.live_event, call.vars[i + 1].type)
+                        except KeyError as k:
+                            # arg mismatch in call, error
+                            error.error("Insufficient arguments in previous CALL to event `%s`.\n" %call.name)
+                    else:
+                        # first ever occurence of this EVENT name
+                        # just return untyped variables
+                        var = python.Variable(i, _v, self.live_event)
+                else:
+                    # create and return untyped variable
+                    assert(not var.type)
+                    ## print(f"Impossible: Event variables cannot have been encountered before the event itself.")
+                
+                event.vars.append(var)
+
+                infer.add_var_to_live_scope(self, var)  # scope.symtab[j] = var(j) etc.
+
+        self.events[event.name] = event # event without actions
         
         # print("New len: %s"%len(self.live_event.vars))
         
@@ -260,11 +280,13 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # print(action.name)
         match action.name:
             case "CREATE_MESSAGE":
+                print(args)
                 if len(args) == 2:
                     # last arg is the var_type
                     _t = args[-1].value
+                    print(f"create_message: {_t}")
                     _type = infer.type_from_type_str(self.gx, _t) # may return list of types -> in case your library has multiple definitions of the same struct.
-                    
+                    print(_type.ident)
                     var = python.Variable(0, args[0].value, action, _type) # here, if _type is a list, store both in this var's possible_types. 
                     
                     # action->var ref
@@ -378,7 +400,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     
                     if var.type:
                         typed.append(var)
-                        if len(untyped) == 1:
+                        if len(untyped) == 1: # var[0] is untyped and var[1] = var is typed
                             untyped[0].type = var.type
                         if len(typed) == 2:
                             assert(typed[0].type.equals(typed[1].type)) 
@@ -387,29 +409,57 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         # always here for timer_ctx.
                         # print(f"Attempt to copy lhs type to rhs, {_v.value}")
                         untyped.append(var)
-                        if len(typed) == 1:
+                        if len(typed) == 1: # var[0] is typed and var[1] =var is untyped
                             var.type = typed[0].type # t1.user_id == std::string.
 
                         if len(untyped) == 2:
-                            # assigning unknown to unknown
+                            # assigning unknown to unknown, var = var[1]
+                            # setting a local id to some timer_ctx attribute
+                            #  will come here.
+                            # i am now on the second var.
+                            _root = var.name.split(".")[0]
+                            print(_root)
+                            if _root != var.name:
+                                _root_var = infer.get_variable(self, 3, _root, action)
+                                assert("timer_expiry_context" in _root_var.type.ident)
+                                _stem = var.name.split(".")[-1] # attr in ctx.
+
+                                # get type of _stem from the ctx 
+                                assert(self.live_event.timer_type)
+                                _t_type = self.live_event.timer_type
+                                
+                                ctx = self.gx.timer_contexts[_t_type]
+
+                                for _attr in ctx.attrs:
+                                    if _stem == _attr.name:
+                                        _t = _attr.type
+                                        untyped[0].type = _t
+                                        var.type = _t
+                                        break
+
                             print([v.name for v in untyped])
-                    
                     
                     action.vars.append(var)
                     print(f"var: {var.name}, undecl = {var.undecl}")
                     infer.add_var_to_live_scope(self, var)
                 
                 # check for timer
+                print("set timer")
+                print([var.type for var in action.vars])
                 for var in action.vars:
                     _root = var.name.split(".")[0]
+                    print(_root)
                     if _root != var.name:
                         _root_var = infer.get_variable(self, 3, _root, action)
+                        print(_root_var.type.ident)
                         if "timer_expiry_context" in _root_var.type.ident:
                             var.in_timer_ctx = True # lhs var is in timer_ctx
                             # create a variable for the stem.
                             # with type = that of the dotted ident
                             _stem = var.name.split(".")[-1]
+                            print(f"stem: {_stem}")
                             _type = var.type
+                            print(_type)
                             stem_var = python.Variable(3, _stem, action, _type)
 
                             # add the var to the timer_ctx.
@@ -418,8 +468,10 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                                 if ctx._id == _root: # _id must be unique across events.
                                     ctx.attrs.append(stem_var)
                                     break
+
                             print("set timer_ctx")
                             print([ctx.attrs for ctx in self.gx.timer_contexts.values()])
+                            #infer.add_var_to_live_scope(self, stem_var)
 
             case "GET_KEY": # try get_procedure_key
                 '''
@@ -613,7 +665,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     # get type from last arg
                     attr_val = args[3].value
                     attr_val_v = infer.get_variable(self, 3, attr_val, action)
-                    assert(attr_val_v.type)
+                    #assert(attr_val_v.type)
                     attr_v.type = attr_val_v.type
 
                 map.add_to_map_struct(attr_v)

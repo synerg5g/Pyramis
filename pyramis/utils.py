@@ -776,7 +776,7 @@ PYRAMIS_ACTIONS = [
     "BREAK",       # XXX dubious
     "CONTINUE" ,    # XXX dubious
     "CREATE_TIMER_CONTEXT",
-    #"TIMER_STOP",
+    "TIMER_STOP",
     "TIMER_START"
 ]
 

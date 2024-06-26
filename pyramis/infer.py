@@ -305,6 +305,7 @@ def type_from_type_str(gx, arg, usage_indirection=None):
         return python.Type(arg, indirection=usage_indirection)
     
     if "timer_expiry_context" in arg:
+        print(arg)
         return python.Type(arg, indirection=usage_indirection)
 
     # first check in user types

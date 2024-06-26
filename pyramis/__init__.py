@@ -150,9 +150,9 @@ class Pyramis:
 
     def do_build(self):
         # # create platform file
-        # self.gx.py_module.generate_platform_h()
+        self.gx.py_module.generate_platform_h()
 
-        # self.gx.py_module.generate_platform_cpp()
+        self.gx.py_module.generate_platform_cpp()
 
         # create makefile
         self.gx.py_module.generate_makefile()

@@ -270,11 +270,11 @@ class Module(PyObject):
         _guard = "#ifndef __" + self.gx.nf_name + "_PLATFORM_H__\n"
         _guard += "#define __" + self.gx.nf_name + "_PLATFORM_H__\n"
         
-        #self.generated.append(_guard)
+        self.generated.append(_guard)
 
         # gen include headers
         # print(f'\"{self.gx.utility_lib}/common/include/datatypes.h\"')
-        _inc = [f'\"{self.gx.utility_lib}/common/include/datatypes.h\"', '<map>', '<set>', 
+        _inc = [f'\"{self.gx._utility_lib}/common/include/datatypes.h\"', '<map>', '<set>', 
                 '<sys/timerfd.h>', '<sys/epoll.h>', '<unistd.h>', 
                 '<string.h>', '<iostream>', '<queue>', '<sys/eventfd.h>', '<variant>']
         _includes = ""
@@ -461,6 +461,8 @@ class Event:
         self.decl = "" # declaration/ header
         self.call_defaults = ""
         self.indent = 0
+
+        self.timer_type = None # if event is a timer callback.
 
 
     def emit(self, module):
@@ -926,7 +928,7 @@ class Map:
     
     def add_to_map_struct(self, variable):
         # add_to_map only after type_lookup
-        assert(variable.type) # only refs to typed variables must be added to map
+#        assert(variable.type) # only refs to typed variables must be added to map
         self.struct.vars[variable.name] = variable
 
 class Timer:
