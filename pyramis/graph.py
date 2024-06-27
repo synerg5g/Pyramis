@@ -203,12 +203,20 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 _ctx_id = self.live_event.formals[0]
                 event.timer_type = timer.type
 
-                if not self.gx.timer_contexts[timer.type]:
-                    v_type = python.Type("timer_expiry_context_" + timer.type + "_t")
-                else:
-                    v_type = python.Type(self.gx.timer_contexts[timer.type]._name)
+                if (not timer.type):
+                    print(event.name)
+                    assert(0)
+                
+                v_type = python.Type("timer_expiry_context_t")
+
+                # if not self.gx.timer_contexts[timer.type]:
+                #     v_type = python.Type("timer_expiry_context_" + timer.type + "_t")
+                # else:
+                #     v_type = python.Type(self.gx.timer_contexts[timer.type]._name)
 
                 var = python.Variable(0, _ctx_id, event, v_type)
+                var.timer_ctx_macro = timer.type
+                event.timer_ctx_var = var
                 
                 event.vars.append(var)
                 infer.add_var_to_live_scope(self, var)
@@ -373,7 +381,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     if not var:
                         # create new variables for the new args
                         var = python.Variable(i, _v.value, action, vt)
+                        print(id(var))
                     else:
+                        print(f"var {var.name} declared before, set to type")
+                        print(id(var))
+                        print(vt.ident)
                         var.type = vt
 
                     var.name = _v.value
@@ -434,8 +446,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                                     if _stem == _attr.name:
                                         _t = _attr.type
                                         untyped[0].type = _t
+                                        untyped[0].timer_ctx_macro = _t_type
                                         var.type = _t
                                         break
+                                print("heresie")
+                                print(untyped[0].type.to_str())
+                                infer.add_var_to_live_scope(self, untyped[0])
 
                             print([v.name for v in untyped])
                     
@@ -446,14 +462,17 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 # check for timer
                 print("set timer")
                 print([var.type for var in action.vars])
+                print(f"In live event {self.live_event.name}")
                 for var in action.vars:
                     _root = var.name.split(".")[0]
-                    print(_root)
+                    print(f"root: {_root}")
                     if _root != var.name:
                         _root_var = infer.get_variable(self, 3, _root, action)
-                        print(_root_var.type.ident)
+                        print(f"root type: {_root_var.type.ident}")
                         if "timer_expiry_context" in _root_var.type.ident:
-                            var.in_timer_ctx = True # lhs var is in timer_ctx
+                            assert(_root_var.timer_ctx_macro)
+                            var.in_timer_ctx = True # lhs (dotted) var is in timer_ctx
+                            var.timer_ctx_macro = _root_var.timer_ctx_macro
                             # create a variable for the stem.
                             # with type = that of the dotted ident
                             _stem = var.name.split(".")[-1]
@@ -660,7 +679,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         map.key_type = key_v.type
                 
                 attr = args[2].value
-                attr_v = infer.get_variable(self, 2, attr, action)
+                attr_v = infer.get_variable(self, 2, attr, action) # 
                 if not attr_v.type:
                     # get type from last arg
                     attr_val = args[3].value
@@ -759,8 +778,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 _t_type = args[1].value
 
                 if "MACRO" in _t_type:
+                    print(f"before: {_t_type}")
+                    _t_type = _t_type.split("(")[1][:-1]
                     print(_t_type)
-                    _t_type = _t_type.split("(")[1]
 
                 ctx = utils.TimerCtx(_id, _t_type)
 
@@ -768,11 +788,14 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 self.gx.timer_contexts[_t_type] = ctx
 
                 # create python.Variable for the id.
-                _type = infer.type_from_type_str(self.gx, ctx._name) # _name is the struct name.
+                # _type = infer.type_from_type_str(self.gx, ctx._name) # _name is the struct name.
+                _type = infer.type_from_type_str(self.gx, "timer_expiry_context_t")
                 var = python.Variable(0, _id, action, _type)
+                var.timer_ctx_macro = _t_type
 
                 # add to action
                 action.vars.append(var)
+                #action.vars.append(_t_type) # MACRO timer type
 
                 # add to scope
                 infer.add_var_to_live_scope(self, var)
@@ -791,10 +814,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 --> timerfdd = generic_timer_start(__timer_type, __timeout, __expiry_context, &__callback, nfvInst)
                 --> b. timerfdd.timerCB = &__callback;
                 --> c. timerfdd.ctx = <__expiry_context ka type>{__expiry_context}
+                --> d. nfvInst->fd_map[timerfdd.fd] = timerfdd; // add to fdmap.
                 
-                // all autogen.
-                fdData_t g_t_s(...) {
-                    // create timerfdd, add to epoll, return timerfdd.
+                // all autogen, no deps
+                fdData_t generic_timer_start( __timeout, nfVinst) {
+                    // create timerfdd, set timeout,  add to epoll, return timerfdd.
                 }
                 '''
                 print("timer_start")
@@ -817,22 +841,24 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     const auto it = std::find_if(
                     nfvInst->fd_map.begin(),
                     nfvInst->fd_map.end(), 
-                    [&procedure_key, &timer_type](const auto &fd_map_entry) { return (fd_map_entry.second.timer_ctx.timer_id == timer_id
+                    [&procedure_key, &timer_type](const auto &fd_map_entry) { return (fd_map_entry.second.ctx.timer_id == timer_id
                     && fd_map_entry.second.timer_ctx.user_id == userID); } // requires g++ -std=c++17. if using insert to insert values into map.
                     );
 
                     if (it != nfvInst->fd_map.end()) {
                         auto timer_fdd = it->second
-                        generic_timer_stop(timer_fdd, nfvInst)}
+                    }
+                ---> b. generic_timer_stop(__timer_fdd, nfvinst)
 
-                ---> b. generic_timer_stop(__timer_type, __timer_fdd)
-
-                void generic_timer_stop() {
+                void generic_timer_stop(fdData_t __timer_fdd, nfvinst) {
                     // close tfd.
+                    // erase fd from fdmap
                     // all autogen    
                 }
                 '''
-                pass
+                var = infer.get_variable(self, 0, args[0].value, action)
+                action.vars.append(var)
+                
 
         # add action to live event, 
         # no scope exit required.

@@ -119,7 +119,8 @@ class Module(PyObject):
         _guard += "#define __" + self.gx.nf_name + "_LINKING_H__\n"
         self.generated.append(_guard)
 
-        _inc = ["\"../../udf.h\"", f"\"{self.gx.nf_name}_platform.h\"", f"\"{self.gx.nf_name}_contexts.h\""]
+        _inc = ["\"../../udf.h\"", f"\"{self.gx.nf_name}_platform.h\"", f"\"{self.gx.nf_name}_contexts.h\"",
+                "<algorithm>"]
         _includes = ""
         for __inc in _inc:
             _includes += "#include " + __inc + "\n"
@@ -131,28 +132,41 @@ class Module(PyObject):
         for event in self.events.values():
             _name = event.name
             _event_decl = "void " + _name + "("
-
-            if any(action.name == "DECODE" for action in event.actions) or any(action.name == "SEND" for action in event.actions):
-                decl_defaults = "size_t length, int sockfd, struct nfvInstanceData *nfvInst"
-                call_defaults = "length, sockfd, nfvInst"
+            if not event.timer_type:
+                if any(action.name == "DECODE" for action in event.actions) or any(action.name == "SEND" for action in event.actions):
+                    decl_defaults = "size_t length, int sockfd, struct nfvInstanceData *nfvInst"
+                    call_defaults = "length, sockfd, nfvInst"
+                else:
+                    decl_defaults = "size_t sockfd, struct nfvInstanceData *nfvInst"
+                    call_defaults = "sockfd, nfvInst"
+                
+                # if keygen udf not in actions, decl must have procedure_key
+                if not any(action.is_keygen for action in event.actions) and not any(v.name == self.procedure_key.name for v in event.vars):
+                    decl_defaults += f", {self.procedure_key.type.to_str()} {self.procedure_key.name}"
+                    call_defaults += f", {self.procedure_key.name}"
             else:
-                decl_defaults = "size_t sockfd, struct nfvInstanceData *nfvInst"
-                call_defaults = "sockfd, nfvInst"
-            
-            # if keygen udf not in actions, decl must have procedure_key
-            if not any(action.is_keygen for action in event.actions) and not any(v.name == self.procedure_key.name for v in event.vars):
-                decl_defaults += f", {self.procedure_key.type.to_str()} {self.procedure_key.name}"
-                call_defaults += f", {self.procedure_key.name}"
+                decl_defaults = "struct nfvInstanceData *nfvInst"
+                call_defaults = "nfvInst"
 
             _user = ""
             for v in event.vars:
-                _user += v.type_to_str() + " " + v.name + ", "
+                if event.timer_type:
+                    assert(len(event.vars) == 1)
+                    _user += v.type_to_str() + "& " + v.name + ", "
+                else:
+                    _user += v.type_to_str() + " " + v.name + ", "
         
             _event_decl += (_user + decl_defaults) + ")"
             event.decl += _event_decl # assign to event.
             event.call_defaults += call_defaults
 
             self.generated.append(_event_decl + ";\n")
+        
+        _generic_timer = ""
+        _generic_timer += "fdData_t generic_timer_start(int __timeout, struct nfvInstanceData *nfvInst);\n"
+        _generic_timer += "void generic_timer_stop(auto timer_itr, struct nfvInstanceData *nfvInst);\n"
+
+        self.generated.append(_generic_timer)
         
         self.generated.append("\n")
 
@@ -203,7 +217,46 @@ class Module(PyObject):
             self.previous_map = None
             self.previous_action = None
             self.mutex = False
+        
+        # generate generic_timer_start and stop
+        g_start = """
+fdData_t generic_timer_start(int timeout, struct nfvInstanceData *nfvInst) {
+    int tfd = timerfd_create(CLOCK_REALTIME, 0);
+    
+    struct itimerspec new_spec = {
+        .it_interval = {0,0}, 
+        .it_value = {timeout, 0}     
+    };
 
+    timerfd_settime(tfd, 0, &new_spec, NULL);
+
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = tfd;
+    epoll_ctl(nfvInst->epoll_fd, EPOLL_CTL_ADD, tfd, &ev);
+
+    fdData_t timer_fdd = fdData_t(TIMERFD_SOCKET, tfd);
+
+    return timer_fdd;
+}
+
+"""
+        self.generated.append(g_start)
+
+        g_stop = """
+void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
+    int tfd = timerfd__it->second.fd;
+    struct itimerspec stop_timer_spec = {{}, {}};
+    timerfd_settime(tfd, 0, &stop_timer_spec, NULL);
+
+    close(tfd);
+
+    nfvInst->fd_map.erase(timerfd_it);
+}
+
+"""
+
+        self.generated.append(g_stop)
 
         file = self.gx.output_dir / f"{self.gx.nf_name}_linking.cpp"
         self.write_to_file(file)
@@ -320,12 +373,15 @@ class Module(PyObject):
         self.generated.append(_timer_types)
 
         # gen timer context structs from gx.timer_contexts
+        # need to add a field for _e_timer_type along with procedure_key for STOP timer find.
         print([ctx._name for ctx in self.gx.timer_contexts.values()])
         _structs = ""
         for ctx in self.gx.timer_contexts.values():
             _struct = ""
             _struct += "struct " + ctx._name + " {\n"
             _struct += "\tint procedure_key;\n"
+            _struct += "\tsize_t length;\n"
+            _struct += "\t_e_TimerType timer_type;\n"
             for _a in ctx.attrs[1:]:
                 _attr = ""
                 _attr += "\t" + _a.type.to_str() + " " + _a.name + ";\n"
@@ -463,6 +519,7 @@ class Event:
         self.indent = 0
 
         self.timer_type = None # if event is a timer callback.
+        self.timer_ctx_var = None # for a timer callback event, timer_ctx_var is fixed.
 
 
     def emit(self, module):
@@ -509,7 +566,7 @@ class Event:
                     # unlock previous map
                     self.generated.append("pthread_mutex_unlock(&" + module.previous_map.name + "_lock);\n")
                     
-            action.emit(module) # do p_m_l for store/lookup, do access
+            action.emit(module, self) # do p_m_l for store/lookup, do access
 
             print(f"{action.name} exits {action.exits} scopes")
             self.generated.append(action.generated + action.indent* "\t" + action.exits * "}" + "\n")
@@ -533,7 +590,7 @@ class Action:
         self.is_keygen = False # for keygen udf.
         self.generated = ""
 
-    def emit(self, module):
+    def emit(self, module, event):
         '''
         C++ code generation, unique per action.
         '''
@@ -542,13 +599,13 @@ class Action:
         }
         print(self.name.lower())
         if self.name.lower() in emitters:
-            emitters[self.name.lower()](module)
+            emitters[self.name.lower()](module, event)
         else:
             error.error(f"Action {self.name} not supported yet.")
         
         #module.previous_action = self
 
-    def emit_create_message(self, module):
+    def emit_create_message(self, module, event):
         _type = self.vars[0].type
         _id = self.vars[0].name
 
@@ -558,7 +615,7 @@ class Action:
             _sz = self.vars[0].type.sz
             self.generated += _type.to_str() + " " + _id + "[" + _sz + "];"
         
-    def emit_decode(self, module):
+    def emit_decode(self, module, event):
         # arg[1] is the deserialised ident.
         _body_id = self.vars[1].name
         _type = self.vars[1].type
@@ -575,7 +632,7 @@ class Action:
 
         self.generated += _args + ");\n"                
 
-    def emit_encode(self, module):
+    def emit_encode(self, module, event):
         # decl size and buffer.
         # size_t simple_enc_sz {};
         # std::vector<char> simple_enc(MAX_MESSAGE_SIZE, 0);
@@ -599,13 +656,13 @@ class Action:
         self.generated += _args + ");\n"
         
 
-    def emit_udf(self, module):
+    def emit_udf(self, module, event):
         # declare all undeclared args
         for _arg in self.vars[2:]:
             if "MACRO" in _arg.name:
                 _arg.name = _arg.name.split("(")[1][:-1]
-            if _arg.undecl and _arg.type.thing != utils.TH_ENUM:
-                self.generated += _arg.type.to_str() + " " + _arg.name + " {};\n"
+            # if _arg.undecl and _arg.type.thing != utils.TH_ENUM:
+            #     self.generated += _arg.type.to_str() + " " + _arg.name + " {};\n"
 
         _fn = self.vars[1]
         _ret_id = self.vars[0]
@@ -618,15 +675,16 @@ class Action:
             if (len(self.vars[2:]) == 1):
                 _args += _arg.name
                 self.generated += _args + ");\n"
-                return 
+                return
             else:
                 _args += _arg.name + ", "
-                _args = _args[:-2]
-                self.generated += _args
+                # _args = _args[:-2]
+        _args = _args[:-2] # remove comma
+        self.generated += _args + ");\n"
 
-        self.generated += ");\n"
+        #self.generated += ");\n"
 
-    def emit_set(self, module):
+    def emit_set(self, module, event):
         '''
         undecl, decl set according to path taken by
         infer.get_variable()
@@ -636,40 +694,73 @@ class Action:
 
         if "MACRO" in _rhs.name:
             _rhs.name = _rhs.name.split("(")[1][:-1]
+        
+        if _lhs.in_timer_ctx or _rhs.in_timer_ctx:
+            if event.timer_ctx_var:
+                _ctx_root = event.timer_ctx_var.name
+                ctx_type_t = module.gx.timer_contexts[_lhs.timer_ctx_macro]._name
+            elif _lhs.in_timer_ctx:
+                _ctx_root = _lhs.name.split(".")[0]
+                ctx_type_t = module.gx.timer_contexts[_lhs.timer_ctx_macro]._name
+            elif _rhs.in_timer_ctx:
+                _ctx_root = _rhs.name.split(".")[0]
+                ctx_type_t = module.gx.timer_contexts[_rhs.timer_ctx_macro]._name
+            
+            if _lhs.in_timer_ctx:
+                _ctx_stem = _lhs.name.split(".")[-1]
+            elif _rhs.in_timer_ctx:
+                _ctx_stem = _rhs.name.split(".")[-1]
 
         if _lhs.undecl:
-            if _rhs.type.thing == utils.TH_ARRAY:
-                self.generated += _lhs.type.to_str() + " " + _lhs.name + "(" + _rhs.name + ");\n"
+            # if _rhs.name == eve
+            # if event.timer_ctx_var and _rhs.name == event.timer_ctx_var.name:
+            # if _lhs.in_timer_ctx:
+            #     # std::get
+            #     ctx_type = module.gx.timer_contexts[event.timer_type.name]._name
+            #     self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type + ">(" + _rhs.name + ")"
+            if _lhs.in_timer_ctx: # setting an attribute of ctx.
+                # std::get<..>(_root)._stem = _rhs.name
+                self.generated += "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + " = " + _rhs.name + ";\n"
+                #self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _rhs.name + ")"
+            elif _rhs.in_timer_ctx: # getting a value from a ctx, storing in a local ident.
+                self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + ";\n"
             else:
-                self.generated += _rhs.type.to_str() + " " + _lhs.name + " = " + _rhs.name + ";\n"
-        elif not _lhs.undecl: # dotted always undecl = False
-            if _rhs.type.thing == utils.TH_ARRAY:
-                # memcpy
-                if _lhs.in_timer_ctx:
-                    self.generated += _lhs.name + " = " + _rhs.name + ";\n"
+                if _rhs.type and _rhs.type.thing == utils.TH_ARRAY:
+                    self.generated += _rhs.type.to_str() + " " + _lhs.name + "(" + _rhs.name + ");\n"
                 else:
-                    self.generated += "memcpy(" + _lhs.name + ", " + _rhs.name + ".data(), " + _rhs.name + ".size());\n"
+                    self.generated += _lhs.type.to_str() + " " + _lhs.name + " = " + _rhs.name + ";\n"
+        elif not _lhs.undecl: # dotted always undecl = False
+            print(id(_lhs))
+            if _lhs.in_timer_ctx: # setting an attribute of ctx.
+                # std::get<..>(_root)._stem = _rhs.name
+                self.generated += "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + " = " + _rhs.name + ";\n"
+                #self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _rhs.name + ")"
+            elif _rhs.in_timer_ctx: # getting a value from a ctx, storing in a local ident.
+                self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + ";\n"
             else:
-                self.generated += _lhs.name + " = " + _rhs.name + ";\n"
+                if _rhs.type.thing == utils.TH_ARRAY: # se
+                    self.generated += "memcpy(" + _lhs.name + ", " + _rhs.name + ".data(), " + _rhs.name + ".size());\n"
+                else:
+                    self.generated += _lhs.name + " = " + _rhs.name + ";\n"
 
-    def emit_get_key(self, module):
+    def emit_get_key(self, module, event):
         _id = self.vars[0].name
         _type = self.vars[0].type
 
         self.generated += _type.to_str() + " " + _id + " = " + "fd_to_key_map[sockfd];\n"
         
-    def emit_set_key(self, module):
+    def emit_set_key(self, module, event):
         _key = self.vars[0].name
 
         self.generated += "key_to_fd_map" + "[" + _key + "]" + " = sockfd;\n"
 
-    def emit_append(self, module):
+    def emit_append(self, module, event):
         _container = self.vars[0].seq_alias
         _to_add = self.vars[1]
         if _container.type.asn_seq:
             self.generated += "ASN_SEQUENCE_ADD(&" + _container.name + ", &" + _to_add.name + ");\n"
         
-    def emit_call(self, module):
+    def emit_call(self, module, event):
         _event = self.vars[0].name 
 
         self.generated += _event + "("
@@ -694,7 +785,7 @@ class Action:
 
         self.generated += _args + ");\n"
         
-    def emit_store(self, module):
+    def emit_store(self, module, event):
         # do stuff
         # ....
         # p_m_l
@@ -727,7 +818,7 @@ class Action:
         
         module.previous_map = _map
 
-    def emit_lookup(self, module):
+    def emit_lookup(self, module, event):
         '''
         <ident.type> <ident.name> = <map>[key].<attribute>
         '''
@@ -765,7 +856,7 @@ class Action:
 
         module.previous_map = _map
 
-    def emit_send(self, module):
+    def emit_send(self, module, event):
         _callback = self.vars[-1]
         if _callback == "NULL":
             # sending a response. get fd
@@ -780,9 +871,29 @@ class Action:
         _args = ", ".join(self.vars[:-1])
         _args += ", " + _key_or_fd + ", " + _callback
 
+        _length = ""
+        _procedure_key = ""
+
+        action = next((a for a in event.actions if a.name == "ENCODE"), None)
+        if event.timer_type:
+            ctx_var = event.timer_ctx_var
+            ctx_type_t = "timer_expiry_context_" + event.timer_type + "_t"
+            _procedure_key += "int procedure_key = std::get<" + ctx_type_t + ">(" + ctx_var.name + ").procedure_key;\n"
+            if action: # encode found, new message
+                _new_sz = action.vars[-1]
+                _length += "size_t length = " + _new_sz.name + ";\n"
+            else: # retry
+                assert(ctx_var)
+                _length += "size_t length = std::get<" + ctx_type_t + ">(" + ctx_var.name + ").length;\n"
+        else:
+            _procedure_key += "int procedure_key = " + module.procedure_key.name + ";\n"
+        
+        self.generated += _length
+        self.generated += _procedure_key
+
         self.generated += "send_data(" + _args + ", nfvInst" +  ");\n"
         
-    def emit_loop(self, module):
+    def emit_loop(self, module, event):
         self.generated += "for ("
         print(self.vars)
         _itr = self.vars[0]
@@ -793,7 +904,7 @@ class Action:
         self.generated += _itr.name + " < " + _high.name + "; "
         self.generated += _itr.name + "++) {\n"
     
-    def emit_if(self, module):
+    def emit_if(self, module, event):
         '''
         cond
         '''
@@ -823,43 +934,89 @@ class Action:
         self.generated += cond
         self.generated += ") {\n"
 
-    def emit_else(self, module):
+    def emit_else(self, module, event):
         self.generated += "else { \n"
         pass
 
-    def emit_read_config(self, module):
+    def emit_read_config(self, module, event):
         pass
 
-    def emit_break(self, module):
+    def emit_break(self, module, event):
         self.generated += "break;\n"
 
-    def emit_continue(self, module):
+    def emit_continue(self, module, event):
         self.generated += "continue'\n"
 
-    def emit_pass(self, module):
+    def emit_pass(self, module, event):
         self.generated += ";\n"
 
-    def emit_create_timer_context(self, module):
+    def emit_create_timer_context(self, module, event):
         _type = self.vars[0].type
         _id = self.vars[0].name
+        _t_type = self.vars[0].timer_ctx_macro
 
-        self.generated += _type.to_str() + " " + _id + "{};\n"
+        self.generated += _type.to_str() + " " + _id + "{};\n" # decl variant
 
-        self.generated += self.indent * "\t" + _id + ".procedure_key" + " = " + module.procedure_key.name + ";\n"
+        # get the _name of the timer context struct
+        name = module.gx.timer_contexts[_t_type]._name
 
-    def emit_timer_start(self, module):
-        self.vars[-1] = "&" + self.vars[-1] # callback
+        self.generated += self.indent * "\t" + "std::get<" + name + ">(" + _id + ")" + ".procedure_key = " + module.procedure_key.name + ";\n"
+        # std::get<
+        #self.generated += self.indent * "\t" + _id + ".procedure_key" + " = " + module.procedure_key.name + ";\n"
+
+    def emit_timer_start(self, module, event):
+        #self.vars[-1] = "&" + self.vars[-1] # callback
         print(self.vars)
         _timer_type, _timeout, _ctx, _callback = self.vars
         _args = ", ".join(self.vars)
 
-        self.generated += "fdData_t timerfdd = " + "generic_timer_start(" + _args + ");\n"
-
-        self.generated += self.indent * "\t" + "timerfdd.timerCB = " + _callback + ";\n"
+        self.generated += "fdData_t timerfdd = " + "generic_timer_start(" + _timeout + ", nfvInst" + ");\n"
+        
+        # ctx MUST be of the struct type here. change this.
+        self.generated += self.indent * "\t" + "timerfdd.timerCB = " + "&" + _callback + ";\n"
         self.generated += self.indent * "\t" + "timerfdd.ctx = " + _ctx +";\n"
+        
+        # nfvInst->fd_map[timerfdd.fd] = timerfdd;
+        self.generated += self.indent * "\t" + "nfvInst->fd_map[timerfdd.fd] = timerfdd;\n"
 
-    def emit_timer_stop(self, module):
-        self.generated += "timer_stop_bc\n"
+    def emit_timer_stop(self, module, event):
+        _t_type = self.vars[0]
+        if "MACRO" in _t_type.name:
+            _t_type.name = _t_type.name.split("(")[1][:-1]
+
+        _ctx_var = event.timer_ctx_var
+
+        if _ctx_var:
+            ctx_type_t = module.gx.timer_contexts[event.timer_ctx_var.timer_ctx_macro]._name
+        else:
+            ctx_type_t = "timer_expiry_context_" +_t_type.name + "_t"
+
+        if _ctx_var: # in callback
+            _timer_type = self.indent * "\t"  + "auto __timer_type__ = " + "std::get<" + ctx_type_t + ">(" + _ctx_var.name + ").timer_type;\n"
+            _procedure_key = self.indent * "\t" + "auto __procedure_key__ = " + "std::get<" + ctx_type_t + ">(" + _ctx_var.name + ").procedure_key;\n"
+        else:
+            _timer_type = self.indent * "\t" + "auto __timer_type__ = " + _t_type.name + ";\n"
+            _procedure_key = self.indent * "\t" + "auto __procedure_key__ = " + module.procedure_key.name + ";\n"
+        
+        self.generated += _timer_type + _procedure_key
+
+        _find_if = ""
+        _find_if += self.indent * "\t" + "const auto it = std::find_if(\n"
+        _find_if += self.indent * "\t" + "nfvInst->fd_map.begin(),\n"
+        _find_if += self.indent * "\t" + "nfvInst->fd_map.end(),\n"
+        _find_if += self.indent * "\t" + "[&__timer_type__, &__procedure_key__]" + "(const auto &fd_map_entry)"
+        _find_if += self.indent * "\t" + "{return (std::get<" + ctx_type_t + ">(" + "fd_map_entry.second.ctx).timer_type == __timer_type__\n"
+        _find_if += self.indent * "\t" + "&& std::get<" + ctx_type_t + ">(" + "fd_map_entry.second.ctx).procedure_key == __procedure_key__);}\n"
+        _find_if += self.indent * "\t" + ");\n\n"
+
+        self.generated += _find_if
+
+        _generic_stop = ""
+        _generic_stop += self.indent * "\t" + "if (it != nfvInst->fd_map.end()) {\n"
+        _generic_stop += (self.indent + 1) *"\t" + "generic_timer_stop(it, nfvInst);\n"
+        _generic_stop += self.indent * "\t" + "}\n"
+
+        self.generated += _generic_stop
 
 
 class UserDefined:
@@ -887,6 +1044,7 @@ class Variable:
         self.seq_alias = None
         self.undecl = undecl
         self.in_timer_ctx = False
+        self.timer_ctx_macro = None
 
         # assign self.type from somewhere.
         if isinstance(type, list):
@@ -928,7 +1086,7 @@ class Map:
     
     def add_to_map_struct(self, variable):
         # add_to_map only after type_lookup
-#        assert(variable.type) # only refs to typed variables must be added to map
+        assert(variable.type) # only refs to typed variables must be added to map
         self.struct.vars[variable.name] = variable
 
 class Timer:
