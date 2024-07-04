@@ -147,6 +147,7 @@ CREATE_TIMER_CONTEXT(__id, __timer_type)
 TIMER_START(__timer_type, __timeout, __expiry_context, __callback)
 
 TIMER_STOP(__timer_type)
+```
 
 #### Special Actions
 
