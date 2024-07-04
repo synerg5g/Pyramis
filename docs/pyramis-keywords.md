@@ -131,6 +131,10 @@ SET_KEY(__key)
 SEND(__message_buffer, __sending_interface, __peer_nf_name, __receiving_interface, [__callback])
 ```
 
+#### Timer Actions
+Pyramis allows a user to procedurally create, start and stop timers with arbitrary callbacks.
+Timer callbacks are specified as regular `EVENT`s in the processing file.
+
 #### Special Actions
 
 Pyramis provides three keywords: `UDF`, `CALL`, `MACRO` that perform specialised tasks.
