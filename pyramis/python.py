@@ -539,7 +539,15 @@ DEPS_DIR = $(BUILD_DIR)/.deps
         _util = "UTILITY_LIBRARY = " + str(self.gx._utility_lib) + "\n"
 
         self.generated.append(_util)
+        self.generated.append("LOG_LIB_DIR = $(UTILITY_LIBRARY)/platform/src\n\n")
 
+        _target_name = self.gx.nf_name
+        _target = ""
+        _target += _target_name + ": "
+        _target += "$(DEPS_DIR)/NF_A_linking.o $(DEPS_DIR)/platform.o $(DEPS_DIR)/udf.o $(DEPS_DIR)/logging.o\n"
+        _target += f"\t@$(CC) $(CFLAGS) $(DEPS_DIR)/NF_A_linking.o $(DEPS_DIR)/platform.o $(DEPS_DIR)/udf.o $(DEPS_DIR)/logging.o -o $(BUILD_DIR)/{_target_name} $(LDFLAGS)\n\n"
+        self.generated.append(_target)
+    
         _rest = ""
         _mk = self.gx._pyramis / "Makefile.txt"
         with open(_mk, "r") as  f_mk_r:

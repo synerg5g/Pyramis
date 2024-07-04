@@ -8,6 +8,7 @@ import logging
 import os
 import os.path
 import pathlib
+import subprocess
 
 from . import log, config, utils, graph, python
 
@@ -56,18 +57,12 @@ class Pyramis:
         Can override previously set default params here.
         """
         gx = config.GlobalInfo(magic, args) # create asn_base_types, udf parse
-        # for u in gx.udfs.values():
-        #     print(f"{u.name}: {[tp.ident for tp in u.arg_types]}"
-
         # if args.debug:
         #     self.log.setLevel(logging.DEBUG) # run debug logs
 
         # if args.silent:
         #     gx.silent = True
         #     self.log.setLevel(logging.WARNING)
-
-        # self.log.debug(gx.nf_dsl)
-        # self.log.debug(gx.output_dir)
         return gx
 
     @classmethod
@@ -113,7 +108,7 @@ class Pyramis:
         args = parser.parse_args()
         print(args)
 
-        translator = cls(args, magic) # Main translation class with all global configs.
+        translator = cls(args, magic) # init dirs, global configs.
 
         translator.log.info('*** Pyramis-to-C++ Transpiler 0.0.1 ***')
         translator.log.info('')
@@ -121,13 +116,78 @@ class Pyramis:
         if args.subcmd == 'analyze':
             translator.do_analyze()    # ast entry point, generate error report.
         
-        if args.subcmd == "build":
-            translator.do_analyze()
-            
-            translator.do_raw_translate()  # C++ code-generation
-            
+        if args.subcmd == "build":            
             # generate platform , makefile
             translator.do_build()
+        
+        if args.subcmd == "run":
+            # first check if __BUILD__ contains all the required files,
+            # If not, do_build
+            if not translator.validate_build():
+                print("no build")
+                translator.gx.output_dir = translator.gx.build_dir
+                translator.do_build() # mkdir __BUILD__, output to __BUILD__
+                translator.output_dir = translator.gx.run_dir
+
+            n_threads = args.threads
+            translator.do_run(n_threads)
+    
+    def validate_build(self):
+        nf = self.gx.nf_name
+        required_files = ["Makefile", f"{nf}_contexts.h", f"{nf}_linking.cpp", f"{nf}_linking.h",
+                          f"{nf}_platform.cpp", f"{nf}_platform.h"]  # Replace with your actual file names
+        _build = self.gx.build_dir
+        # Check if build directory exists
+        if not _build.exists():
+            return False
+
+        # Check if each required file exists
+        missing_files = []
+        for filename in required_files:
+            file_path = _build / filename
+            if not file_path.exists():
+                missing_files.append(file_path)
+
+        if missing_files:
+            print(f"Missing required files for NF '{nf}':")
+            for file_path in missing_files:
+                print(f"  - {file_path}")
+            print("Creating Now")
+            return False
+
+        # All required files found
+        return True
+
+
+    def do_run(self, threads):
+        # find the makefile in gx.build_dir, run make
+        _build = self.gx.build_dir
+        _mkf = _build / "Makefile"
+
+        if not _mkf.exists():
+            raise FileNotFoundError(f"Makefile not found: {_mkf}")
+        
+        _run = self.gx.run_dir
+        if not _run.exists():
+            _run.mkdir(parents=True)
+
+        try:
+            subprocess.run(["make"], cwd=_build, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error during make: {e}")
+            return
+        
+        _exec = _build / "build" / self.gx.nf_name    
+        if not _exec.exists():
+            print(f"Executable not found: {_exec}")
+            return
+
+        # run the exe from that folder via ./NF lo <n_threads>
+        try:
+            subprocess.run([str(_exec), "lo", str(threads)], cwd=_build, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error during execution: {e}")
+            return
     
     def do_analyze(self):
         # check notes
@@ -149,6 +209,10 @@ class Pyramis:
 
 
     def do_build(self):
+        self.do_analyze()
+        
+        self.do_raw_translate()  # C++ code-generation
+
         # # create platform file
         self.gx.py_module.generate_platform_h()
 

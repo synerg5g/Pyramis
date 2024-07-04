@@ -107,7 +107,6 @@ class GlobalInfo:
         self.user_utils = None
         self.nf_dsl = self.cwd / f"{self.nf_name}.dsl" # dsl file in cwd.
         self.py_ast_path = None
-        self.output_dir = None
         self.init_directories(args)
         self.generate_builtins() # update/create asn_base_types
 
@@ -147,6 +146,9 @@ class GlobalInfo:
         elif args.subcmd == "build":
             self.output_dir = self.build_dir
         elif args.subcmd == "run":
+            if not self.build_dir.exists():
+                # make __BUILD__
+                self.build_dir.mkdir(parents=True, exist_ok=True)
             self.output_dir = self.run_dir
 
         assert(isinstance(self.output_dir, pathlib.Path))
