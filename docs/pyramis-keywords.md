@@ -135,6 +135,12 @@ SEND(__message_buffer, __sending_interface, __peer_nf_name, __receiving_interfac
 Pyramis allows a user to procedurally create, start and stop timers with arbitrary callbacks.
 Timer callbacks are specified as regular `EVENT`s in the processing file.
 
+Before starting a timer, the user must create a specific timer context that is linked to the callback associated with the newly created timer type.
+- One callback event per timer type (specified in `interfaces.json`)
+- One procedure-key per module.
+Thus a single procedure instance can have at most |timer_types| active timers (corresponding to the case where timers are created for each timer type.)
+
+
 #### Special Actions
 
 Pyramis provides three keywords: `UDF`, `CALL`, `MACRO` that perform specialised tasks.
