@@ -154,6 +154,8 @@ class Pyramis:
 
         self.gx.py_module.generate_platform_cpp()
 
+        self.gx.py_module.fixup_udf_h()
+
         # create makefile
         self.gx.py_module.generate_makefile()
 

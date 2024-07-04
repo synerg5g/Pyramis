@@ -13,21 +13,6 @@ from . import error
 from . import utils
 import collections
 
-# def find_module(gx, name, basepath):
-#     # return full filepath
-#     module_name = name
-#     module_path = basepath / ".deps"
-#     file_path = module_path / f"{module_name}.py"
-
-#     filename = None
-#     if file_path.is_file():
-#         filename = file_path   
-
-#     if filename is None:
-#         raise ModuleNotFoundError("No module named '%s'" % module_name)
-
-#     return filename # Path
-
 def parse_file(name):
     filebuf = importlib.util.decode_source(open(name, 'rb').read())
     
@@ -61,7 +46,22 @@ def extract_argnames(arg_struct):
 
     return argnames
 
+def get_last_include(file_path):
+  try:
+    with open(file_path, "r") as file:
+      lines = []
+      saw_include = False  # Flag to track if we encountered an #include
 
+      for line in file:
+        lines.append(line)
+        if "#include" in line.strip():  # Check for #include in stripped line
+          saw_include = True
+        elif saw_include and not line.strip():  # Empty line after potential #include
+          break
+        saw_include = False  # Reset flag after empty line or non-include line
+      return lines
+  except IOError as e:
+    raise IOError(f"Error opening file {file_path}: {e}") from e
 
 class PyObject:
     """Mixin for py objects"""
@@ -104,6 +104,40 @@ class Module(PyObject):
 
         self.generated = [] # store converted text from events.
 
+    def write_to_file(self, filepath):
+        '''Called by the generate_* methods at end.'''
+        # do stuff
+        with open(filepath, mode="w") as f_w:
+            for thing in self.generated:
+                f_w.write(thing)
+
+        # reset module.generated
+        self.generated = []
+    
+    def fixup_udf_h(self):
+        '''
+        add platform.h to udf file
+        '''
+        _plat = self.gx.output_dir / f"{self.gx.nf_name}_platform.h"
+        _udf = self.gx.udfs_path
+
+        _generated = ""
+        with open(_udf, "r") as f_udf_r:
+            _udf_h = f_udf_r.read()
+            _inc = _udf_h.find("#include") # first include
+
+            if _inc == -1: # no includes yet.
+                _generated += "#include " + "\"" + str(_plat) + "\"" + _udf_h
+            else:
+                print(_udf_h[:_inc + 1])
+                if "__BUILD__" in _udf_h[:_inc]:
+                    _generated = _udf_h
+                else:
+                    _generated = _udf_h[:_inc] + "#include " + "\"" + str(_plat) + "\""  + "\n" + _udf_h[_inc:]
+        self.generated.append(_generated)
+
+        self.write_to_file(_udf)
+
     def generate_linking_h(self):
         '''
         Contains:
@@ -144,6 +178,7 @@ class Module(PyObject):
                 if not any(action.is_keygen for action in event.actions) and not any(v.name == self.procedure_key.name for v in event.vars):
                     decl_defaults += f", {self.procedure_key.type.to_str()} {self.procedure_key.name}"
                     call_defaults += f", {self.procedure_key.name}"
+                    event.key_in_decl = True
             else:
                 decl_defaults = "struct nfvInstanceData *nfvInst"
                 call_defaults = "nfvInst"
@@ -245,7 +280,7 @@ fdData_t generic_timer_start(int timeout, struct nfvInstanceData *nfvInst) {
 
         g_stop = """
 void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
-    int tfd = timerfd__it->second.fd;
+    int tfd = timerfd_it->second.fd;
     struct itimerspec stop_timer_spec = {{}, {}};
     timerfd_settime(tfd, 0, &stop_timer_spec, NULL);
 
@@ -365,10 +400,10 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
 
         # gen timer_types enum
         _timer_types = ""
-        _timer_types += "typedef enum TimerType: std::uint8_t {\n"
+        _timer_types += "enum class _e_TimerType: std::uint8_t {\n"
         for i, _timer_type in enumerate(self.gx.timers.keys()):
             _timer_types += "\t" + _timer_type + " = " + str((i + 1)) + ",\n"
-        _timer_types += "} _e_TimerType;\n\n"
+        _timer_types += "};\n\n"
         
         self.generated.append(_timer_types)
 
@@ -397,8 +432,9 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
         _variants += "typedef std::variant<\n"
         for ctx in self.gx.timer_contexts.values():
             _timer_struct = ctx._name
-            _variants += "\t" + _timer_struct + ",\n"
-        _variants += "> timer_expiry_context_t;\n\n"
+            _variants += "\t" + _timer_struct + ","
+        _variants = _variants[:-1]
+        _variants += "\n> timer_expiry_context_t;\n\n"
 
         self.generated.append(_variants)
 
@@ -490,17 +526,30 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
 
 
     def generate_makefile(self):
-        pass
+        # get the headers
+        _setup = """
+CC = g++
+CFLAGS = -std=c++20 -Wall -Wextra -g
+LDFLAGS = -lsctp -lpthread
+BUILD_DIR = ./build
+DEPS_DIR = $(BUILD_DIR)/.deps
+"""
+        self.generated.append(_setup)
+        # define custom utility_library location
+        _util = "UTILITY_LIBRARY = " + str(self.gx._utility_lib) + "\n"
 
-    def write_to_file(self, filepath):
-        '''Called by the generate_* methods at end.'''
-        # do stuff
-        with open(filepath, mode="w") as f_w:
-            for thing in self.generated:
-                f_w.write(thing)
+        self.generated.append(_util)
 
-        # reset module.generated
-        self.generated = []
+        _rest = ""
+        _mk = self.gx._pyramis / "Makefile.txt"
+        with open(_mk, "r") as  f_mk_r:
+            _rest += f_mk_r.read()
+
+        self.generated.append(_rest)
+
+        # write_to_file
+        file = self.gx.output_dir / "Makefile"
+        self.write_to_file(file)
 
 class Event:
     def __init__(self, gx, node=None, parent=None):
@@ -517,6 +566,7 @@ class Event:
         self.decl = "" # declaration/ header
         self.call_defaults = ""
         self.indent = 0
+        self.key_in_decl = False
 
         self.timer_type = None # if event is a timer callback.
         self.timer_ctx_var = None # for a timer callback event, timer_ctx_var is fixed.
@@ -661,8 +711,6 @@ class Action:
         for _arg in self.vars[2:]:
             if "MACRO" in _arg.name:
                 _arg.name = _arg.name.split("(")[1][:-1]
-            # if _arg.undecl and _arg.type.thing != utils.TH_ENUM:
-            #     self.generated += _arg.type.to_str() + " " + _arg.name + " {};\n"
 
         _fn = self.vars[1]
         _ret_id = self.vars[0]
@@ -678,11 +726,8 @@ class Action:
                 return
             else:
                 _args += _arg.name + ", "
-                # _args = _args[:-2]
         _args = _args[:-2] # remove comma
         self.generated += _args + ");\n"
-
-        #self.generated += ");\n"
 
     def emit_set(self, module, event):
         '''
@@ -712,36 +757,35 @@ class Action:
                 _ctx_stem = _rhs.name.split(".")[-1]
 
         if _lhs.undecl:
-            # if _rhs.name == eve
-            # if event.timer_ctx_var and _rhs.name == event.timer_ctx_var.name:
-            # if _lhs.in_timer_ctx:
-            #     # std::get
-            #     ctx_type = module.gx.timer_contexts[event.timer_type.name]._name
-            #     self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type + ">(" + _rhs.name + ")"
             if _lhs.in_timer_ctx: # setting an attribute of ctx.
                 # std::get<..>(_root)._stem = _rhs.name
                 self.generated += "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + " = " + _rhs.name + ";\n"
-                #self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _rhs.name + ")"
             elif _rhs.in_timer_ctx: # getting a value from a ctx, storing in a local ident.
                 self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + ";\n"
             else:
                 if _rhs.type and _rhs.type.thing == utils.TH_ARRAY:
                     self.generated += _rhs.type.to_str() + " " + _lhs.name + "(" + _rhs.name + ");\n"
                 else:
-                    self.generated += _lhs.type.to_str() + " " + _lhs.name + " = " + _rhs.name + ";\n"
+                    if _rhs.name in module.gx.timers.keys():
+                        self.generated += _lhs.type.to_str() + " " + _lhs.name + " = _e_TimerType::" + _rhs.name + ";\n"
+                    else:
+                        self.generated += _lhs.type.to_str() + " " + _lhs.name + " = " + _rhs.name + ";\n"
         elif not _lhs.undecl: # dotted always undecl = False
             print(id(_lhs))
             if _lhs.in_timer_ctx: # setting an attribute of ctx.
                 # std::get<..>(_root)._stem = _rhs.name
                 self.generated += "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + " = " + _rhs.name + ";\n"
-                #self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _rhs.name + ")"
             elif _rhs.in_timer_ctx: # getting a value from a ctx, storing in a local ident.
                 self.generated += _lhs.type.to_str() + " " + _lhs.name +  " = " + "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + ";\n"
-            else:
-                if _rhs.type.thing == utils.TH_ARRAY: # se
+            else: # set not related to a timer context.
+                if _rhs.type.thing == utils.TH_ARRAY: 
                     self.generated += "memcpy(" + _lhs.name + ", " + _rhs.name + ".data(), " + _rhs.name + ".size());\n"
                 else:
-                    self.generated += _lhs.name + " = " + _rhs.name + ";\n"
+                    # if its a timer_type, use the enum
+                    if _rhs.name in module.gx.timers.keys():
+                        self.generated += _lhs.name + " = _e_TimerType::" + _rhs.name + ";\n"
+                    else:
+                        self.generated += _lhs.name + " = " + _rhs.name + ";\n"
 
     def emit_get_key(self, module, event):
         _id = self.vars[0].name
@@ -889,7 +933,13 @@ class Action:
             _procedure_key += "int procedure_key = " + module.procedure_key.name + ";\n"
         
         self.generated += _length
-        self.generated += _procedure_key
+
+        print("lookie here")
+        for var in event.vars:
+            print(var.name)
+        
+        if not event.key_in_decl:
+            self.generated += _procedure_key
 
         self.generated += "send_data(" + _args + ", nfvInst" +  ");\n"
         
@@ -995,7 +1045,7 @@ class Action:
             _timer_type = self.indent * "\t"  + "auto __timer_type__ = " + "std::get<" + ctx_type_t + ">(" + _ctx_var.name + ").timer_type;\n"
             _procedure_key = self.indent * "\t" + "auto __procedure_key__ = " + "std::get<" + ctx_type_t + ">(" + _ctx_var.name + ").procedure_key;\n"
         else:
-            _timer_type = self.indent * "\t" + "auto __timer_type__ = " + _t_type.name + ";\n"
+            _timer_type = self.indent * "\t" + "auto __timer_type__ = " + "_e_TimerType::" + _t_type.name + ";\n"
             _procedure_key = self.indent * "\t" + "auto __procedure_key__ = " + module.procedure_key.name + ";\n"
         
         self.generated += _timer_type + _procedure_key
