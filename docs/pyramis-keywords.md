@@ -137,9 +137,16 @@ Timer callbacks are specified as regular `EVENT`s in the processing file.
 
 Before starting a timer, the user must create a specific timer context that is linked to the callback associated with the newly created timer type.
 - One callback event per timer type (specified in `interfaces.json`)
-- One procedure-key per module.
+- One `procedure-key` per module.
+  
 Thus a single procedure instance can have at most |timer_types| active timers (corresponding to the case where timers are created for each timer type.)
 
+```Python
+CREATE_TIMER_CONTEXT(__id, __timer_type)
+
+TIMER_START(__timer_type, __timeout, __expiry_context, __callback)
+
+TIMER_STOP(__timer_type)
 
 #### Special Actions
 
