@@ -153,7 +153,8 @@ CREATE_TIMER_CONTEXT(__id, __timer_type)
 # __expiry_context
 TIMER_START(__timer_type, __timeout, __expiry_context, __callback)
 
-
+# Stop the running timer of type __timer_type
+# Usually as a result of condition
 TIMER_STOP(__timer_type)
 ```
 
