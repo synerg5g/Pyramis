@@ -398,10 +398,11 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 i.e. get_from_scope = null,
                 code-emit must emit it with its declaration.
                 '''
+                print("in set...")
                 untyped = []
                 typed = []
                 for i, _v in enumerate(args):
-                    # print(f"Getting variable for {_v.value}")
+                    print(f"set...Getting variable for {_v.value}")
                     var = infer.get_variable(self, i, _v.value, action)
 
                     if not var:
@@ -416,6 +417,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             untyped[0].type = var.type
                         if len(typed) == 2:
                             assert(typed[0].type.equals(typed[1].type)) 
+                            print("me")
 
                     elif not var.type:
                         # always here for timer_ctx.
@@ -423,6 +425,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         untyped.append(var)
                         if len(typed) == 1: # var[0] is typed and var[1] =var is untyped
                             var.type = typed[0].type # t1.user_id == std::string.
+                            print("herebo")
 
                         if len(untyped) == 2:
                             # assigning unknown to unknown, var = var[1]
@@ -484,7 +487,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             # add the var to the timer_ctx.
                             # -- find the timer_ctx
                             for ctx in self.gx.timer_contexts.values():
-                                if ctx._id == _root: # _id must be unique across events.
+                                if _root in ctx._id: # if _root in _ctx.ids (i.e. referred by multiple)
+                                    print(f"add {stem_var.name} to {_root}")
                                     ctx.attrs.append(stem_var)
                                     break
 
@@ -782,10 +786,14 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     _t_type = _t_type.split("(")[1][:-1]
                     print(_t_type)
 
-                ctx = utils.TimerCtx(_id, _t_type)
-
                 # add ctx to map
-                self.gx.timer_contexts[_t_type] = ctx
+                if _t_type not in self.gx.timer_contexts.keys():
+                    ctx = utils.TimerCtx(_id, _t_type)
+                    self.gx.timer_contexts[_t_type] = ctx
+                else:
+                    ctx = self.gx.timer_contexts[_t_type]
+                    ctx._id.append(_id)
+
 
                 # create python.Variable for the id.
                 # _type = infer.type_from_type_str(self.gx, ctx._name) # _name is the struct name.
@@ -801,8 +809,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 infer.add_var_to_live_scope(self, var)
 
                 # add procedure_key to ctx attributes.
-                procedure_key = self.module.procedure_key # var
-                ctx.attrs.append(procedure_key)
+                #procedure_key = self.module.procedure_key # var, name will be from the user ident.
+
+                # if ctx for this timer type has been created already and contains 
+                # procedure_key, do nothing
+                # if ctx.attrs and any(var.name == )
+                # ctx.attrs.append(procedure_key) # this is ctx.attrs[0]
 
                 print("timer_ctx abbe")
 

@@ -647,11 +647,14 @@ class TimerCtx:
     - timer context must be created before starting a timer.
     '''
     def __init__(self, _id, _type):
-        self._id = _id # t1, t2 etc
+        self._id = [] # t1, t2 etc
         self._type = _type
         self._name = "timer_expiry_context_" + _type + "_t"
         self._callback = None # should be a ref to python.Event.
         self.attrs = [] # name : python.Variable(), filled by SET.
+
+        if not self._id:
+            self._id.append(_id)
         
 # ideally, an If parse should generate a list of 
 # Conditions as objects.

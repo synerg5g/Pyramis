@@ -417,7 +417,7 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
             _struct += "\tint procedure_key;\n"
             _struct += "\tsize_t length;\n"
             _struct += "\t_e_TimerType timer_type;\n"
-            for _a in ctx.attrs[1:]:
+            for _a in ctx.attrs:
                 _attr = ""
                 _attr += "\t" + _a.type.to_str() + " " + _a.name + ";\n"
                 _struct += _attr
