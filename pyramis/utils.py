@@ -41,8 +41,8 @@ def do_struct(mini):
     with tag_name as a defined struct. Do reduce_to_type(tag_name)
     - typedef can also be used for type renaming accross multiple files.
     '''
-    ## print(mini_s)
-    ## print('\n')
+    #print(mini)
+    #print('\n')
     #lines = mini_s.split('\n')
     stack = []
     structs = []
@@ -128,12 +128,13 @@ def do_struct(mini):
                     else:
                         attr_type = ' '.join(line.split()[:-1])
                         attr_id = line.split()[-1]
-                    #print(attr_type)
+                    #print(attr_type, attr_id)
                 attr = Attribute(attr_id, attr_type)
 
                 # add attribute to curr struct
                 # non-structs will exit with None
                 stack[-1].attributes[attr.id] = attr
+    #print("mini parsed")
 
 class Parser:
     '''
@@ -226,6 +227,7 @@ R_STRUCT_SIMPLE_ATTRIBUTE = r'(?!(?:enum\s+))\S+\s*\S+\s*;'
 R_STRUCT_END = r'(\})?\s*([^;]+;)'
 R_STRUCT_ARRAY_SIZE = r'\[?[^\[\]]*\]'
 R_ASN_SEQUENCE = r'A_SEQUENCE_OF\((.*)\)\s*.*;'
+R_TYPEDEF_DECL_NO_BRACE = r'(?:typedef\s+)?struct\s+(\w*)\s*'
 
 # typedef <arbitrary number of whitespace-sep. strings> string0
 # g1: old_type g3: new_type.
@@ -256,7 +258,7 @@ class FileParser:
         get struct attribute types at the local-file
         level only.
         '''
-        print("Begin header parse " + str(self.current_file.stem))
+        #print("Begin header parse " + str(self.current_file.stem))
         f_hdr = open(self.current_file, "r") # actual header
 
         # store #define values
@@ -264,9 +266,6 @@ class FileParser:
 
         # create struct objects for this header
         self.isolate_structs()
-
-        if (self.current_file.stem == "nssai"):
-            print(self.structs)
 
         f_hdr.close()
     
@@ -319,7 +318,7 @@ class FileParser:
         brackets = 0
         spurious = False
 
-        for line in code:
+        for i, line in enumerate(code):
             line = line.strip()
             if line.startswith('extern "C"'):
                 continue
@@ -337,7 +336,9 @@ class FileParser:
             m_union = re.match(R_TYPEDEF_UNION, line)
             m_typedef = re.match(R_TYPEDEF, line)
             m_asn_sequence = re.match(R_ASN_SEQUENCE, line)
+            m_typedef_decl_no_brace = re.match(R_TYPEDEF_DECL_NO_BRACE, line)
 
+            # build minis
             if (
                 m_simple_attr or 
                 m_compound_attr or 
@@ -345,29 +346,34 @@ class FileParser:
                 m_nested or 
                 m_union or 
                 m_struct_end or
-                m_typedef
+                m_typedef or
+                m_typedef_decl_no_brace or
+                line.startswith("{")
                 ):
                 spurious = False
                 if ")" in line and not m_asn_sequence:
                     continue
                 if ((m_simple_attr or m_compound_attr or m_asn_sequence) and brackets == 0 and not m_struct_end):
+                    spurious = True
                     continue
-                # if (m_typedef and (brackets == 0)):
-                #     # associate a python.Type right here?
-                #     print(line)
-                #     print(mini)
-                #     mini.append(line)
-                #     structs = do_struct(mini)
-                if (brackets > 0):
+                if (brackets > 0): # entering/entered a struct
+                    if line.strip() == "{":
+                        continue
                     #print(line)
                     mini.append(line)
                     # the centre portion (if defined already) must now
                     # have a new name
                     # typedef struct cunt CuntDawg -> struct cunt -> CuntDawg.
-                    structs = do_struct(mini)
-                elif (brackets == 0): # new struct
+                    #structs = do_struct(mini)
+                elif (brackets == 0): # end of a struct, currently also beginning of a struct with its bracket on the next line.
                     if m_typedef:
                         mini = []
+                    if m_typedef_decl_no_brace:
+                        if code[i + 1].strip() == "{":
+                            line += code[i + 1]
+                        mini = []
+                        mini.append(line)
+                        continue
                     mini.append(line)
                     structs = do_struct(mini)
                     try:
