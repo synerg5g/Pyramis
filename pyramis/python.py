@@ -1243,6 +1243,11 @@ class Type:
             return True, self.subs[attr]
         
         for sub in self.subs:
+            if isinstance(self.subs[sub], list):
+                print(self.subs[sub])
+                for _t in self.subs[sub]:
+                    print(_t.to_str())
+                    print(_t.subs)
             res, type = self.subs[sub]._contains(attr)
             if res:
                 return res, type

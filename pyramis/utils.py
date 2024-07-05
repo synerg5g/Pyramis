@@ -164,17 +164,8 @@ class Parser:
                     #print(f"---------------\n{str(file_parser.current_file)}\n--------------------")
                     file_parser.parse_header()
                     self.parsed_parsers[str(file_parser.current_file)] = file_parser # each file will have a key
-
-        # link the included parsers
-        # every header-parser now has access to
-        # the parsers of its included headers.
-        for parser in self.parsed_parsers.values():
-            assert(isinstance(parser, FileParser))
-            parser.append_includes(self) # append appropriate parsers to the fileparsers include list.
         
         return self.struct_types_to_json()
-
-        # return self.adjust_types()
 
     def struct_types_to_json(self):
         '''
@@ -205,26 +196,6 @@ class Parser:
         f_message_types.close()
         
         return data
-
-    def adjust_types(self):
-        '''
-        After a single-level parse of all files, 
-        for each struct in a parsed file, reduce_to_type() for each 
-        struct in each header file.
-        '''
-        base_types = {}
-        for parser in self.parsed_parsers.values():
-            #print(parser.current_file)
-            #print(len(parser.structs))
-            print(f"xxx--- Building types from {parser.current_file.stem}.h ---xxx")
-            for struct in parser.structs.values():
-                assert(isinstance(parser, FileParser))
-                final = parser.reduce_to_type(struct, self)
-                assert(isinstance(final, python.Type))
-                print(f"=== *** {final.ident} struct-to-type complete *** ===")
-                print(final)
-                base_types[final.ident] = final
-        return base_types
     
 def data_type(s):
     # Attempt to convert to int
@@ -285,6 +256,7 @@ class FileParser:
         get struct attribute types at the local-file
         level only.
         '''
+        print("Begin header parse " + str(self.current_file.stem))
         f_hdr = open(self.current_file, "r") # actual header
 
         # store #define values
@@ -292,6 +264,9 @@ class FileParser:
 
         # create struct objects for this header
         self.isolate_structs()
+
+        if (self.current_file.stem == "nssai"):
+            print(self.structs)
 
         f_hdr.close()
     
@@ -415,130 +390,6 @@ class FileParser:
                 continue
 
         f_hdr.close()
-    
-    def append_includes(self, controller):
-        '''
-        Append appropriate parser objects to the  self.includes.
-        '''
-        #print(self.current_file.name)
-        f_hdr = open(self.current_file)
-        for line in f_hdr:
-            if line.startswith(TOKEN_INCLUDE):
-                i_h_i = line.find(TOKEN_INCLUDE) + len(TOKEN_INCLUDE)
-                i_h_f = pathlib.Path(line[i_h_i:].strip().replace('"', '')).name
-                # o(n) :/
-                for key, parser in controller.parsed_parsers.items():
-                    if i_h_f == key.split("/")[-1]:
-                        #print(parser.current_file)
-                        self.includes.append(parser)
-        #print(len(self.includes))
-
-    def reduce_to_type(self, struct, controller):
-        '''
-        return a python.Type tree corresponding to the 
-        struct input.
-        '''
-        assert(isinstance(controller, Parser))
-
-        struct_name = struct.name
-        print(f"Reducing to python.Type: \n{struct}")
-        if struct_name in controller.type_cache:
-            print(f"=== Found {struct_name} in type-cache ===")
-            return controller.type_cache[struct_name]
-        else:
-            final = python.Type(struct_name) # empty subs, # nested struct type name
-            for attr in struct.attributes.values(): # each entry in the struct
-                # single struct, all primitive attributes
-                #print(f"Search for {type(attr.type_str)}")
-                if attr.type_str in infer.C_TYPES:
-                    print(f"=== {attr.type_str}: {attr.id} is a primitive type ===")
-                    final.subs[attr.id] = python.Type(attr.type_str)
-                    continue
-                # single struct, attr type is a struct in the 
-                # same file
-                elif (attr.type_str in self.structs) or ("struct " + attr.type_str) in self.structs:
-                    print(f"=== Found {attr.type_str} in current file {self.current_file.stem}.h")
-                    try:
-                        nested_struct = self.structs[attr.type_str] # this can become a python.type(), should be 
-                    except:
-                        nested_struct = self.structs["struct " + attr.type_str] # this can become a python.type(), should be 
-                    nested_ = self.reduce_to_type(nested_struct, controller) # returns a python.Type with filled in subs
-                    controller.type_cache[nested_.ident] = nested_
-                    final.subs[attr.id] = nested_
-                
-                # single struct, attr_type is not defined in current file
-                # check included files
-                elif attr.type_str not in self.structs:
-                    print(f"=== {attr.type_str} was not in {self.current_file.stem}.h ===")
-                    i_nested = self.find_attr_in_includes(attr.type_str, controller) # check includes
-                    # if not i_nested:
-                    #     for included in self.includes:
-                    #         i_nested = included.find_in_includes(attr.type_str, controller) # check includes of includes
-                    if not i_nested:
-                        # eg. vector<> , etc.
-                        print(f"Likely a collection: {attr.type_str}")
-                        i_nested = python.Type(attr.type_str)
-                    #     controller.type_cache[attr.type_str] = 
-                    #     final.subs[attr.id] = attr
-                    # else:
-                    controller.reduce_header_cache.clear()
-                    controller.type_cache[i_nested.ident] = i_nested
-                    final.subs[attr.id] = i_nested
-                
-            controller.type_cache[final.ident] = final
-        
-        return final
-
-    def find_attr_in_includes(self, attr_type, controller):
-        nested_ = None
-        print(f"Included files of {self.current_file.stem}.h are:")
-        print([f"{i.current_file.stem}.h" for i in self.includes])
-
-        if (not self.includes) and (attr_type not in self.structs):
-            print(f"!!-- Not found (exhaustive): {attr_type} --!!")
-            return nested_
-                
-        # check if type is present in the includes of the current header
-        for included in self.includes:
-            assert(isinstance(included, FileParser))
-            print(f"Searching in {included.current_file.stem}.h")
-            try:
-                if str(self.current_file) in controller.reduce_header_cache[attr_type]:
-                    continue
-            except KeyError as k:
-                pass
-            # for s in included.structs:
-            #     print(s)
-            # print(included.structs.keys())
-            if attr_type in included.structs:
-                print(f"=== Found {attr_type} in {included.current_file.stem}.h ===")
-                struct_ = included.structs[attr_type]
-                assert(isinstance(struct_, Struct))
-                nested_ = included.reduce_to_type(struct_, controller)
-                return nested_
-            else:
-                print(f"{attr_type} not found in {included.current_file.stem}.h")
-                # add header name to not_found_cache
-                print("x---Adding to not_found_header_cache---x")
-                controller.reduce_header_cache[attr_type] = str(included.current_file)
-                # or check includes of the current parser?
-                print("--- Checking recursively ---")
-                print(f"Now Searching in included files of {included.current_file.stem}.h")
-                found = included.find_attr_in_includes(attr_type, controller)
-                if found:
-                    return found
-                else:
-                    continue
-                #continue
-
-        # print(f"{attr_type} not found in includes of {self.current_file.stem}.h")
-        # if not nested_:
-            # search included files of the current file
-        # print(f"{attr_type} not found in {included.current_file.stem}.h")
-        # print("--- Checking recursively ---")
-        # for included in self.includes:
-        #     print(f"Now Searching in included files of {included.current_file.stem}.h")
-        #     included.find_in_includes(attr_type, controller)
 
 class Attribute:
     def __init__(self, id, type_str):
@@ -920,4 +771,3 @@ class Preprocessor:
             # raise pyex.PyramisKeywordError()
             error.error("`%s` is not a valid Pyramis action, abort.\n" %action, 
                         filename=self._in, lineno=lineno)
-            

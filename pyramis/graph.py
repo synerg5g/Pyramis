@@ -224,7 +224,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         if not timer_cb:
             for i, _v in enumerate(self.live_event.formals):
                 var = infer.get_variable(self, i, _v, self.live_event)
-                if not var:
+                if not var.type:
                     # search calls - it might be possible that a previous CALL
                     # occurred to this EVENT. 
                     if event.name in self.calls:
@@ -232,6 +232,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         try:
                             # 
                             var = python.Variable(i, _v, self.live_event, call.vars[i + 1].type)
+                            print(f"assigned type to {_v} from CALL to event {event.name}, type: {call.vars[i + 1].type}")
                         except KeyError as k:
                             # arg mismatch in call, error
                             error.error("Insufficient arguments in previous CALL to event `%s`.\n" %call.name)
@@ -577,7 +578,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 '''
                 CALL(event_name, *args)
                 '''
-                # check if event_name is defined.
+                # check if event_name is defined, uneccessary
                 event_name = args[0].value
                 event_name_v = python.Variable(0, event_name, action)
                 action.vars.append(event_name_v)
@@ -648,7 +649,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             '''
                             var = python.Variable(i, _v.value, action)
                     else:
-                        # var is typed by actions before call. ideal scenario
+                        # var is typed by actions before call, in the same scope. ideal scenario
                         print(f"`{_v.value}` was typed before CALL: {var.type.ident}")
                     
                     # add to action
@@ -659,7 +660,8 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     infer.add_var_to_live_scope(self, var)
 
                     # add action to calls
-                self.calls[action.name] = action
+                print("added " + action.vars[0].name + " to calls")
+                self.calls[action.vars[0].name] = action
 
             case "STORE":
                 '''

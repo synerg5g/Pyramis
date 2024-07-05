@@ -147,6 +147,10 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
     while(curr_scope.kind != Scope.MODULE):
         if (ident in curr_scope.symtab):
             print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
+            try:
+                print(f"type: {curr_scope.symtab[ident].type.ident}")
+            except:
+                print(f"type: {curr_scope.symtab[ident].type}")
             # may even return a list
             return curr_scope.symtab[ident]
         else:
@@ -202,6 +206,8 @@ def get_variable(mv, arg_idx, ident, parent):
             # if dotted not found, search for type of root
             # print(f"Getting variable of root {root}")
             var = get_variable_from_scope(mv, arg_idx, parent, root)
+            print("got root of dotted")
+            print(var.type)
             if not var:
                 # accessing attributes of an unitialised variable.
                 error.error("`%s`: Attempt to access unitialised variable `%s`"%(parent.name, root))
@@ -218,7 +224,7 @@ def get_variable(mv, arg_idx, ident, parent):
                     final_t = var.type.get_typeof(stem)
                 # print(f"Type of stem {stem} is {fi    nal_t}")
                 return python.Variable(arg_idx, ident, parent, final_t)
-            else:
+            else: # new var with type = None
                 # invalid attribute access.
                 error.error(f"Invalid sub-attribute of {var.name}  was accessed.")
                 return None
