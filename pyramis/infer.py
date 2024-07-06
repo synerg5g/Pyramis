@@ -50,7 +50,7 @@ def enter_new_scope(mv, scope_kind):
     else:
         error.error("Not a valid Scope kind", warning=True)
 
-    print(f"Created new live scope of kind {mv.live_scope.kind}")
+    #print(f"Created new live scope of kind {mv.live_scope.kind}")
 
     indent = copy.deepcopy(mv.indent)
 
@@ -68,7 +68,7 @@ def exit_live_scope(mv):
     '''
     mv.live_scope = mv.live_scope.encloser
     mv.indent -= 1
-    print(f"Exiting scope, new live scope: {mv.live_scope.kind}, indent: {mv.indent}")
+    #print(f"Exiting scope, new live scope: {mv.live_scope.kind}, indent: {mv.indent}")
 
 def add_var_to_live_scope(mv, var):
     '''
@@ -77,25 +77,25 @@ def add_var_to_live_scope(mv, var):
     in case the protocol library has multiple structs with the same
     name.
     '''
-    print(f"adding var to scope: {var}: {var.type}")
-    if (var.type):
-        print(f"... of type {var.type.ident}")
+    ##print(f"adding var to scope: {var}: {var.type}")
+    # if (var.type):
+    #     print(f"... of type {var.type.ident}")
 
     if var.name not in mv.live_scope.symtab:
         # first instance of the var in this scope
-        print(f"First instance of {var.name} in this scope, {mv.live_scope.kind}")
+        #print(f"First instance of {var.name} in this scope, {mv.live_scope.kind}")
         mv.live_scope.symtab[var.name] = var
     elif var.type and (not mv.live_scope.symtab[var.name].type):
         # definitely overwrite type
-        print(f"previously untyped variable is now typed, {var.name}: {var.type.ident}")
+        ##print(f"previously untyped variable is now typed, {var.name}: {var.type.ident}")
         mv.live_scope.symtab[var.name].type = var.type
     else:
         # overwrite type?
-        print(f"WARNING: `{ mv.live_scope.symtab[var.name].name}`: { mv.live_scope.symtab[var.name].type} already exists in the current scope.")
-        #print(f"Avoided overwrting with new value {var.name}: {var.type.ident}")
+        ##print(f"WARNING: `{ mv.live_scope.symtab[var.name].name}`: { mv.live_scope.symtab[var.name].type} already exists in the current scope.")
+        ##print(f"Avoided overwrting with new value {var.name}: {var.type.ident}")
         mv.live_scope.symtab[var.name].type = var.type
     
-    print(f"scope is now: {mv.live_scope.symtab.keys()}")
+    #print(f"scope is now: {mv.live_scope.symtab.keys()}")
 
 C_TYPES = [
     "char",
@@ -142,11 +142,11 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
     # search the persistent scope structure
     # upto the current event.
     # return variable (typed/untyped) if true, else None
-    print(f"searching for [{ident}]")
+    #print(f"searching for [{ident}]")
     curr_scope = mv.live_scope
     while(curr_scope.kind != Scope.MODULE):
         if (ident in curr_scope.symtab):
-            print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
+            #print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
             try:
                 print(f"type: {curr_scope.symtab[ident].type.ident}")
             except:
@@ -155,9 +155,9 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
             return curr_scope.symtab[ident]
         else:
             # climb parent
-            print(f"{ident} not found here, moving up")
+            #print(f"{ident} not found here, moving up")
             curr_scope = curr_scope.encloser
-    print(f"{ident} not found in scope traversal")
+    #print(f"{ident} not found in scope traversal")
     return None
 
 # search for an arg in the local scope tree
@@ -166,7 +166,7 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
 # parent is the python.Action() that contains this variable
 # create the python.Action before get_variable.
 def get_variable(mv, arg_idx, ident, parent):
-    # print(f"get_variable(): Attempting to get variable for {ident} in action {parent.name}")
+    # #print(f"get_variable(): Attempting to get variable for {ident} in action {parent.name}")
     assert(isinstance(parent, python.Action) or isinstance(parent, python.Event))
     if not ident:
         return None
@@ -188,8 +188,8 @@ def get_variable(mv, arg_idx, ident, parent):
     stem = ident.split(".")[-1]
     root = ident.split(".")[0]
     dotted = (len(ident.split(".")) > 1)
-    # print(ident)
-    # print(f"Dotted: {dotted}")
+    # #print(ident)
+    # #print(f"Dotted: {dotted}")
 
     # search for exact (dotted or otherwise) name in scope.
     var = get_variable_from_scope(mv, arg_idx, parent, ident)
@@ -200,14 +200,14 @@ def get_variable(mv, arg_idx, ident, parent):
             # this is the first ever encounter - i.e. 
             # no python.Var() has ever been created in THIS scope.
             # return untyped variable
-            print(f"Created a new untyped python.Variable for {ident}")
+            #print(f"Created a new untyped python.Variable for {ident}")
             return python.Variable(arg_idx, ident, parent, undecl=True)
         else:
             # if dotted not found, search for type of root
-            # print(f"Getting variable of root {root}")
+            # #print(f"Getting variable of root {root}")
             var = get_variable_from_scope(mv, arg_idx, parent, root)
-            print("got root of dotted")
-            print(var.type)
+            #print("got root of dotted")
+            #print(var.type)
             if not var:
                 # accessing attributes of an unitialised variable.
                 error.error("`%s`: Attempt to access unitialised variable `%s`"%(parent.name, root))
@@ -217,12 +217,12 @@ def get_variable(mv, arg_idx, ident, parent):
                     # expect another layer of type assign during
                     # code-gen for set/udf asString()
                     final_t = python.Type("json") 
-                # print(f"Type of root {root} is {var.type}")
+                # #print(f"Type of root {root} is {var.type}")
                 elif "timer_expiry_context" in var.type.ident:
                     final_t =  None # just the root type, even if stem is being accessed.
                 else:
                     final_t = var.type.get_typeof(stem)
-                # print(f"Type of stem {stem} is {fi    nal_t}")
+                # #print(f"Type of stem {stem} is {fi    nal_t}")
                 return python.Variable(arg_idx, ident, parent, final_t)
             else: # new var with type = None
                 # invalid attribute access.
@@ -237,7 +237,7 @@ def test_valid_type(gx, arg):
 # for a single main struct
 # usage_indirection only from parse_udf.
 def reduce_to_type(gx, struct, base_types, usage_indirection):
-    print("reducing to type: %s"%struct)
+    #print("reducing to type: %s"%struct)
     if isinstance(struct, list):
         # struct with multiple definitions
         # pick the one with most attributes
@@ -248,9 +248,9 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
 
     assert(isinstance(struct, dict))
 
-    if not isinstance(base_types, dict):
-        print(type(base_types))
-        # handle list with same type name.
+    # if not isinstance(base_types, dict):
+    #     #print(type(base_types))
+    #     # handle list with same type name.
 
     assert(isinstance(base_types, dict))
 
@@ -273,29 +273,29 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
             except:
                 nested_struct = base_types["struct " + attr["__type__"]] # this can become a python.type(), should be 
             
-            # print(nested_struct)
+            # #print(nested_struct)
             
             nested_ = reduce_to_type(gx, nested_struct, base_types, usage_indirection) # returns a python.Type with filled in subs or a list of types.
             if isinstance(nested_, list):
-                # print(f"Reduce returned list of types, reduce_to_type: {[(nested__.ident, nested__.thing) for nested__ in nested_]}")
+                # #print(f"Reduce returned list of types, reduce_to_type: {[(nested__.ident, nested__.thing) for nested__ in nested_]}")
                 gx.type_cache[nested_[0].ident] = nested_ # both have same ident, dont care
             else:
                 assert(isinstance(nested_, python.Type))
-                # print(f"Got single python.type: {nested_.ident, nested_.thing}")
-                # print(nested_.subs.values())
+                # #print(f"Got single python.type: {nested_.ident, nested_.thing}")
+                # #print(nested_.subs.values())
                 gx.type_cache[nested_.ident] = nested_
             final.subs[attr["__id__"]] = nested_
         else:
             # enum type
             thing = attr["__thing__"]
             if thing != utils.TH_ARRAY:
-                print(f"attr {attr_name} is being assigned enum thing. old thing: {thing}")
+                #print(f"attr {attr_name} is being assigned enum thing. old thing: {thing}")
                 final.subs[attr_name] = python.Type(attr["__type__"], thing=utils.TH_ENUM)
             else:
-                print(f'attr {attr_name} is being retained: {attr["__type__"]}, {thing}, asn seq: {attr["__asn_seq__"]}')
+                #print(f'attr {attr_name} is being retained: {attr["__type__"]}, {thing}, asn seq: {attr["__asn_seq__"]}')
                 final.subs[attr_name] = python.Type(attr["__type__"], thing, usage_indirection, attr["__asn_seq__"])
 
-    ## print(struct)
+    ## #print(struct)
     return final
 
 # call from CREATE MESSAGE, parse udfs
@@ -303,7 +303,7 @@ def reduce_to_type(gx, struct, base_types, usage_indirection):
 # base_types will be a dict of type_t: {...etc...}
 def type_from_type_str(gx, arg, usage_indirection=None):
     assert(isinstance(gx, config.GlobalInfo))
-    ## print(f"convert to python.Type: {arg}")
+    ## #print(f"convert to python.Type: {arg}")
     if not arg:
         return python.Type("EOT") # end of tree
     
@@ -319,7 +319,7 @@ def type_from_type_str(gx, arg, usage_indirection=None):
         return python.Type(arg, indirection=usage_indirection)
     
     if "timer_expiry_context" in arg:
-        print(arg)
+        #print(arg)
         return python.Type(arg, indirection=usage_indirection)
 
     # first check in user types
@@ -335,8 +335,8 @@ def type_from_type_str(gx, arg, usage_indirection=None):
                     return final
             assert(isinstance(struct, dict))
             if struct["__name__"] == arg:
-                #print(usage_indirection)
-                #print(arg)
+                ##print(usage_indirection)
+                ##print(arg)
                 final = reduce_to_type(gx, struct, user_bases, usage_indirection)# base structs will have indirection, thing empty. pain to modify struct parsing to differenciate b/w a BASE and a MEMBER
                 return final
     

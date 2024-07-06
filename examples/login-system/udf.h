@@ -16,19 +16,28 @@
 // udf cant have any dependencies on the platform file
 #include <vector>
 //#include "./generated/synerp_platform.h"
-#include "../utility_library/synerp_messages.h"
+#include "./utils/synerp_messages.h"
+
+// include the platform file?
+// #include "./__BUILD__/NF_A/NF_A_platform.h"
 
 //@@encoder: SynerPMessageHeader_t
 void SynerPMessageHeaderEncode(std::vector<char>& buffer, SynerPMessageHeader_t &msg_struct, size_t &buffer_size);
 
 //@@decoder: SynerPMessageHeader_t
-void SynerPMessageHeaderDecode(SynerPMessageHeader_t &msg_struct, std::vector<char>& message, size_t &buffer_size);
+void SynerPMessageHeaderDecode(SynerPMessageHeader_t &msg_struct, std::vector<char>& message, size_t &buffer_size); // THIS IS CORRECT DECODE FORMAT (body,  buffer, size)
 
+// THIS IS CORRECT ENCODE FORMAT (buffer, body, size)
 //@@encoder: SynerPMessage_t
-void SynerPMessageEncode(std::vector<char>& buffer, SynerPMessage_t &msg_struct, size_t &buffer_size);
+void SynerPMessageEncode(std::vector<char>& buffer, SynerPMessage_t &msg_struct, size_t &buffer_size); 
 
 //@@decoder: SynerPMessage_t
 void SynerPMessageDecode(SynerPMessage_t &msg_struct, std::vector<char>& buffer, size_t &buffer_size);
+
+
+//int nasMessagePlainDecode(nasMessage_t &nasMessage, uint8_t *buffer, uint32_t decodedLen);
+//int ngapGetNasPdu(NAS_PDU_t &naPdu, NGAP_PDU_t *ngapPdu);
+
 
 // create a custom response string
 std::string generate_login_response(_e_SynerPLoginResponse r_type);

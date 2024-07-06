@@ -30,10 +30,6 @@ typedef enum LoginResponse: std::uint8_t  {
     USER_TIMER_EXPIRY
 } _e_SynerPLoginResponse;
 
-typedef enum TimerType: std::uint8_t {
-    T_LOGIN_FORGET = 1
-} _e_TimerType;
-
 #pragma pack(push, 1)
 typedef struct SynerPMessageHeader {
     uint8_t size; // calculated and filled by client after payload has been stored. on server, anytime recv returns < 

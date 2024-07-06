@@ -27,6 +27,16 @@
                     "NF_B"
                 ]
             }
+        ],
+        "Timers": [
+            {
+                "Type": "T_LOGIN_FORGET",
+                "Callback": "forget_user"
+            },
+            {
+                "Type": "T_OTHER_TIMER",
+                "Callback": "other_callback"
+            }
         ]
     },
 
@@ -36,13 +46,13 @@
                 "Name": "ib0",
                 "ApplicationProtocol": "synerp",
                 "MessageType": ["synerp"],
-                "TransportProtocol": "TCP_PROTOCOL",
-                "ConnectionType": "PERSISTENT",
+                "TransportProtocol": "UDP_PROTOCOL",
+                "ConnectionType": "SHORT",
                 "IP": "127.0.0.1",
-                "Port": 4848,
+                "Port": 6868,
                 "Processing": ["ib0_server_entry"],
                 "PeerNodes": [
-                    "NF_B"
+                    "NF_A"
                 ]
             }
         ]

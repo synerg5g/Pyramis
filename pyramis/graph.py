@@ -29,18 +29,6 @@ def setmv(mv):
 def getmv():
     return _mv
 
-def check_redef(gx, node):
-    existing_events = getmv().funcs
-    print(existing_events)
-
-    for event_name in existing_events:
-        name = node.name
-        if name in event_name:
-            # error.error(
-            #     "function/class redefinition is not supported", gx, node, mv=getmv()
-            # )
-            print("Function redefinition detected.") # todo: error class stores all errors in a logfile without terminating.
-
 def get_arg_nodes(node):
     '''
     Return list of ast.Constant objects that 
@@ -95,7 +83,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # create "Pyramis" Logger object
         self.log = logging.getLogger(self.__class__.__name__) 
 
-        # create a formatted handler to print logs
+        # create a formatted handler to #print logs
         os.makedirs("./__logs/", exist_ok=True)
         log_file = logging.FileHandler(filename="./__logs/mv_log.txt")
         log_file.setFormatter(log.CustomFormatter())
@@ -108,58 +96,32 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # set the default log level
         self.log.setLevel(logging.DEBUG)
 
-    # #return list of ast nodes of type cl
-    # def stmt_nodes(self, node, cl):
-    #     result = []
-    #     for child in node.body:
-    #         if isinstance(child, cl):
-    #             result.append(child)
-    #     return result
 
-    # def forward_references(self, node):
-    #     """
-    #     - append a list of functiondef nodes to the visitor's .funcnodes field.
-    #     - create Function objects and add string args to their "formals" field.
-    #     """
-    #     getmv().event_nodes = [] # ref to visitor
-        
-    #     # gets every ast.node of functiondef i.e. EVENT.
-    #     print(self.stmt_nodes(node, ast.FunctionDef))
-    #     for ast_functiondef_node in self.stmt_nodes(node, ast.FunctionDef):
-    #         check_redef(self, ast_functiondef_node)
-    #         getmv().event_nodes.append(ast_functiondef_node)
-
-    #         # event_name: python.event
-    #         getmv().funcs[ast_functiondef_node.name] = python.Event(self.gx, ast_functiondef_node) # maybe add to __untyped_events[n.name] instead
-    #         #print(f"formals: {getmv().funcs[n.name].formals}")
-
-    #     #print(f"{getmv().funcnodes}")
-
-    def validate_walk(self):
-        for event in self.events.values():
-            try:
-                print(f"Event {event.name}: vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
-            except:
-                print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
+    # def validate_walk(self):
+    #     for event in self.events.values():
+    #         try:
+    #             print(f"Event {event.name}: vars: {[(var.name, var.type.thing, var.type.ident) for var in event.vars]}")
+    #         except:
+    #             print(f"FAILED: Event vars: {[(var.name) for var in event.vars]}")
                 
-            for action in event.actions:
-                if isinstance(action, python.Action):
-                    print(f"Action: {action.name}")
-                    print(action.vars)
-                else:
-                    print(f"Non-action in event.actions: {event} :: {action}")
-                    print(type(action))
-                for var in action.vars:
-                    if isinstance(var, python.Variable):
-                        print(f'`{var.name}`: {var.type}')
-                    else:
-                        print(f"Non-var in action.vars: {action} -> {var}")
-                        print(type(var))
+    #         for action in event.actions:
+    #             if isinstance(action, python.Action):
+    #                 #print(f"Action: {action.name}")
+    #                 #print(action.vars)
+    #             else:
+    #                 #print(f"Non-action in event.actions: {event} :: {action}")
+    #                 #print(type(action))
+    #             for var in action.vars:
+    #                 if isinstance(var, python.Variable):
+    #                     #print(f'`{var.name}`: {var.type}')
+    #                 else:
+    #                     #print(f"Non-var in action.vars: {action} -> {var}")
+    #                     #print(type(var))
 
-        # check if map structs are complete.
-        for map in self.gx.maps.values():
-            print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
-            print(f"key type: {map.key_type.ident}, {map.key_type.thing}")
+    #     # check if map structs are complete.
+    #     for map in self.gx.maps.values():
+    #         #print(f"map {map.name} attributes: {[(key, val.type.thing, val.type.ident) for key, val in map.struct.vars.items()]}")
+    #         #print(f"key type: {map.key_type.ident}, {map.key_type.thing}")
     
     def visit(self, node, *args):
         ast_utils.BaseNodeVisitor.visit(self, node, *args)
@@ -176,20 +138,20 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             self.visit(child, None)
         self.log.debug("Module AST walk complete.")
 
-        self.validate_walk()
-        print(self.live_scope.kind)
+        #self.validate_walk()
+        #print(self.live_scope.kind)
 
         # can begin a second ast walk from here,
         # XXX TODO
     
     def visit_FunctionDef(self, node, parent=None):
-        print(f"Visiting {type(node)} i.e. EVENT {node.name}")
+        #print(f"Visiting {type(node)} i.e. EVENT {node.name}")
         _, indent = infer.enter_new_scope(self, infer.Scope.EVENT)
 
         if node.name in getmv().events:
             error.error("Redeclaration of event %s.\n" %node.name)
         else: 
-            # print("New EVENT detected.")
+            # #print("New EVENT detected.")
             event = python.Event(self.gx, node, parent)
             getmv().events[node.name] = event
         
@@ -204,7 +166,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 event.timer_type = timer.type
 
                 if (not timer.type):
-                    print(event.name)
+                    #print(event.name)
                     assert(0)
                 
                 v_type = python.Type("timer_expiry_context_t")
@@ -232,7 +194,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         try:
                             # 
                             var = python.Variable(i, _v, self.live_event, call.vars[i + 1].type)
-                            print(f"assigned type to {_v} from CALL to event {event.name}, type: {call.vars[i + 1].type}")
+                            #print(f"assigned type to {_v} from CALL to event {event.name}, type: {call.vars[i + 1].type}")
                         except KeyError as k:
                             # arg mismatch in call, error
                             error.error("Insufficient arguments in previous CALL to event `%s`.\n" %call.name)
@@ -243,7 +205,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 else:
                     # create and return untyped variable
                     assert(not var.type)
-                    ## print(f"Impossible: Event variables cannot have been encountered before the event itself.")
+                    ## #print(f"Impossible: Event variables cannot have been encountered before the event itself.")
                 
                 event.vars.append(var)
 
@@ -251,12 +213,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
         self.events[event.name] = event # event without actions
         
-        # print("New len: %s"%len(self.live_event.vars))
+        # #print("New len: %s"%len(self.live_event.vars))
         
         for body_node in node.body:
             self.visit(body_node, node, indent) # parent of all the nodes being visited == ast.Functiondef
 
-        # print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
+        # #print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
         # exit scope
         self.module.events[node.lineno] = event # event with actions
 
@@ -271,31 +233,31 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         assert isinstance(node.func, ast.Name)
         # Create action
         action = python.Action(self.gx, node.func.id, parent, _indent, self)
-        print(f"Visiting action {action.name}, parent = {parent}")
-        print(f"action indent: {_indent}")
+        #print(f"Visiting action {action.name}, parent = {parent}")
+        #print(f"action indent: {_indent}")
 
         self.live_action = action
 
         try:
             if node == _last_else_action.value:
-                print(f"last action {action.name}")
+                #print(f"last action {action.name}")
                 self.live_action.exits +=1
                 _last_else_action = None
         except:
             pass
 
-        # print(f"Now visiting args of {node} i.e. action {action}")
+        # #print(f"Now visiting args of {node} i.e. action {action}")
         args = get_arg_nodes(node)
-        # print(action.name)
+        # #print(action.name)
         match action.name:
             case "CREATE_MESSAGE":
-                print(args)
+                #print(args)
                 if len(args) == 2:
                     # last arg is the var_type
                     _t = args[-1].value
-                    print(f"create_message: {_t}")
+                    #print(f"create_message: {_t}")
                     _type = infer.type_from_type_str(self.gx, _t) # may return list of types -> in case your library has multiple definitions of the same struct.
-                    print(_type.ident)
+                    #print(_type.ident)
                     var = python.Variable(0, args[0].value, action, _type) # here, if _type is a list, store both in this var's possible_types. 
                     
                     # action->var ref
@@ -353,7 +315,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                         var.type = vt
                     
                     var.name = _v.value
-                    print(var.name)
+                    #print(var.name)
                     action.vars.append(var)
                     infer.add_var_to_live_scope(self, var)
 
@@ -374,19 +336,19 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 action.vars.append(ret_id_v)
                 action.vars.append(udf_name)
 
-                # print([v.value for v in args[2:]])
+                # #print([v.value for v in args[2:]])
                 for i, _v in enumerate(args[2:]):
-                    # print(i)
+                    # #print(i)
                     vt = udf.arg_types[i] # the python.Type() is created by config rather than mv
                     var = infer.get_variable(self, i, _v.value, action)
                     if not var:
                         # create new variables for the new args
                         var = python.Variable(i, _v.value, action, vt)
-                        print(id(var))
+                        #print(id(var))
                     else:
-                        print(f"var {var.name} declared before, set to type")
-                        print(id(var))
-                        print(vt.ident)
+                        #print(f"var {var.name} declared before, set to type")
+                        #print(id(var))
+                        #print(vt.ident)
                         var.type = vt
 
                     var.name = _v.value
@@ -399,16 +361,16 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 i.e. get_from_scope = null,
                 code-emit must emit it with its declaration.
                 '''
-                print("in set...")
+                #print("in set...")
                 untyped = []
                 typed = []
                 for i, _v in enumerate(args):
-                    print(f"set...Getting variable for {_v.value}")
+                    #print(f"set...Getting variable for {_v.value}")
                     var = infer.get_variable(self, i, _v.value, action)
 
                     if not var:
                         # rare
-                        print("setting undeclared var %s"%_v.value)
+                        #print("setting undeclared var %s"%_v.value)
                         var = python.Variable(i, _v.value, action)
                         var.undecl = True
                     
@@ -418,15 +380,15 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             untyped[0].type = var.type
                         if len(typed) == 2:
                             assert(typed[0].type.equals(typed[1].type)) 
-                            print("me")
+                            #print("me")
 
                     elif not var.type:
                         # always here for timer_ctx.
-                        # print(f"Attempt to copy lhs type to rhs, {_v.value}")
+                        # #print(f"Attempt to copy lhs type to rhs, {_v.value}")
                         untyped.append(var)
                         if len(typed) == 1: # var[0] is typed and var[1] =var is untyped
                             var.type = typed[0].type # t1.user_id == std::string.
-                            print("herebo")
+                            #print("herebo")
 
                         if len(untyped) == 2:
                             # assigning unknown to unknown, var = var[1]
@@ -434,7 +396,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             #  will come here.
                             # i am now on the second var.
                             _root = var.name.split(".")[0]
-                            print(_root)
+                            #print(_root)
                             if _root != var.name:
                                 _root_var = infer.get_variable(self, 3, _root, action)
                                 assert("timer_expiry_context" in _root_var.type.ident)
@@ -451,28 +413,33 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                                         _t = _attr.type
                                         untyped[0].type = _t
                                         untyped[0].timer_ctx_macro = _t_type
+                                        untyped[0].defined = True
                                         var.type = _t
                                         break
-                                print("heresie")
-                                print(untyped[0].type.to_str())
+                                #print("heresie")
+                                #print(untyped[0].type.to_str())
                                 infer.add_var_to_live_scope(self, untyped[0])
 
-                            print([v.name for v in untyped])
+                            #print([v.name for v in untyped])
                     
                     action.vars.append(var)
-                    print(f"var: {var.name}, undecl = {var.undecl}")
+                    #print(f"var: {var.name}, undecl = {var.undecl}")
                     infer.add_var_to_live_scope(self, var)
                 
+                # Any var that is set is defined.
+                for _v in action.vars:
+                    _v.defined = True
+
                 # check for timer
-                print("set timer")
-                print([var.type for var in action.vars])
-                print(f"In live event {self.live_event.name}")
+                #print("set timer")
+                #print([var.type for var in action.vars])
+                #print(f"In live event {self.live_event.name}")
                 for var in action.vars:
                     _root = var.name.split(".")[0]
-                    print(f"root: {_root}")
+                    #print(f"root: {_root}")
                     if _root != var.name:
                         _root_var = infer.get_variable(self, 3, _root, action)
-                        print(f"root type: {_root_var.type.ident}")
+                        #print(f"root type: {_root_var.type.ident}")
                         if "timer_expiry_context" in _root_var.type.ident:
                             assert(_root_var.timer_ctx_macro)
                             var.in_timer_ctx = True # lhs (dotted) var is in timer_ctx
@@ -480,21 +447,21 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                             # create a variable for the stem.
                             # with type = that of the dotted ident
                             _stem = var.name.split(".")[-1]
-                            print(f"stem: {_stem}")
+                            #print(f"stem: {_stem}")
                             _type = var.type
-                            print(_type)
+                            #print(_type)
                             stem_var = python.Variable(3, _stem, action, _type)
 
                             # add the var to the timer_ctx.
                             # -- find the timer_ctx
                             for ctx in self.gx.timer_contexts.values():
                                 if _root in ctx._id: # if _root in _ctx.ids (i.e. referred by multiple)
-                                    print(f"add {stem_var.name} to {_root}")
+                                    #print(f"add {stem_var.name} to {_root}")
                                     ctx.attrs.append(stem_var)
                                     break
 
-                            print("set timer_ctx")
-                            print([ctx.attrs for ctx in self.gx.timer_contexts.values()])
+                            #print("set timer_ctx")
+                            #print([ctx.attrs for ctx in self.gx.timer_contexts.values()])
                             #infer.add_var_to_live_scope(self, stem_var)
 
             case "GET_KEY": # try get_procedure_key
@@ -546,14 +513,14 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     stem = path[-1]
                 
                 if path:
-                    print("found array seq!")
+                    #print("found array seq!")
                     new_var_name = container_var.name + "." + ".".join(path)
                     new_var_t = container_var.type.get_typeof(stem)
-                    print(new_var_t.ident, new_var_t.thing, new_var_t.asn_seq)
+                    #print(new_var_t.ident, new_var_t.thing, new_var_t.asn_seq)
                     new_var = python.Variable(-1, new_var_name, action, new_var_t)
                     container_var.seq_alias = new_var
                     action.vars.append(container_var)
-                    print(container_var.seq_alias.name)
+                    #print(container_var.seq_alias.name)
                 else:
                     # indent does not contain an attribute of container type.
                     error.error("APPEND: %s does not contain attribute of container type"%container_var.name)
@@ -566,7 +533,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 to_add_var = infer.get_variable(self, 1, args[1].value, action)
                 action.vars.append(to_add_var)
 
-                print(action.vars[0].seq_alias.name)
+                #print(action.vars[0].seq_alias.name)
 
                 # minor bug in type-checking
                 # if not (container_var.type.equals(to_add_var.type)):
@@ -660,7 +627,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     infer.add_var_to_live_scope(self, var)
 
                     # add action to calls
-                print("added " + action.vars[0].name + " to calls")
+                #print("added " + action.vars[0].name + " to calls")
                 self.calls[action.vars[0].name] = action
 
             case "STORE":
@@ -755,10 +722,10 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
                 this_interface = self.gx.interfaces[_this_inf] # returns utils.Interface
                 peer_interface = self.gx.other_nf_interfaces[_peer_nf][_receiving_interface]
-                # print(self.gx.interfaces)
+                # #print(self.gx.interfaces)
 
                 # for iface in this_interface.peer_nodes:
-                #     print(iface)
+                #     #print(iface)
                 #assert(0)
                 _peer_ip = "\"" + peer_interface.ip + "\""
                 _peer_port = peer_interface.port
@@ -784,9 +751,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 _t_type = args[1].value
 
                 if "MACRO" in _t_type:
-                    print(f"before: {_t_type}")
+                    #print(f"before: {_t_type}")
                     _t_type = _t_type.split("(")[1][:-1]
-                    print(_t_type)
+                    #print(_t_type)
 
                 # add ctx to map
                 if _t_type not in self.gx.timer_contexts.keys():
@@ -818,9 +785,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 # if ctx.attrs and any(var.name == )
                 # ctx.attrs.append(procedure_key) # this is ctx.attrs[0]
 
-                print("timer_ctx abbe")
+                #print("timer_ctx abbe")
 
-                print(f"{var.type.ident}")
+                #print(f"{var.type.ident}")
 
             case "TIMER_START":
                 '''
@@ -835,12 +802,12 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                     // create timerfdd, set timeout,  add to epoll, return timerfdd.
                 }
                 '''
-                print("timer_start")
+                #print("timer_start")
                 _timer_type = args[0].value # enum
 
                 if "MACRO" in _timer_type:
                     _timer_type = _timer_type.split("(")[1][:-1]
-                    print(_timer_type)
+                    #print(_timer_type)
                 
                 _args = [_timer_type]
                 _args.extend([_arg.value for _arg in args[1:]])
@@ -880,7 +847,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
     
     def visit_Constant(self, node, parent=None, idx=None):
         map = { } # should contain a set of Pyramis types, accessible by a call to get_type(name). 
-        #print(f"Arg: {node.value}\nType: {type(node.value)}")
+        ##print(f"Arg: {node.value}\nType: {type(node.value)}")
         self.log.debug(f"do arg {idx} i.e. {node} of {parent}")
         
     def visit_For(self, node, parent=None, _indent=None, _last_else_action=None):
@@ -913,15 +880,15 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
 
 
     def visit_If(self, node, parent=None, _indent=None, _last_else_action=None):
-        print(f"Visiting {node}, parent = {parent}")
+        #print(f"Visiting {node}, parent = {parent}")
         _, indent = infer.enter_new_scope(self, infer.Scope.BLOCK)
 
         action = python.Action(self.gx, "IF", parent, indent-1, self)
-        print(f"IF indent: {indent}")
+        #print(f"IF indent: {indent}")
         # create if utils.Conditions
         # returns a list
         _cond = node.test.value
-        print("condition: [%s]"%_cond)
+        #print("condition: [%s]"%_cond)
 
         conditions = utils.make_conditions(_cond)
 
@@ -932,13 +899,13 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 #cond.type_check()
         
         action.vars.extend(conditions)
-        print(len(action.vars))
+        #print(len(action.vars))
         
         self.live_event.actions.append(action)
 
         for child in node.body:
             self.visit(child, node, indent, _last_else_action) # parent of all these children will be an ast.IF
-        print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
+        #print(f"Finished visiting sub-nodes of {node} i.e. IF Block")
         
         if node.orelse:
             self.live_action.exits += 1 
@@ -948,14 +915,14 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
             indent += 1
             last = get_last_action(node)
             #last = node.orelse[-1]
-            print(f"last in else: {last.value.func.id}")
+            #print(f"last in else: {last.value.func.id}")
             assert(isinstance(last, ast.Expr))
-            print(last.value.func.id)
+            #print(last.value.func.id)
             #assert(0)
             for child in node.orelse:
                 # indent -= 1
                 # # create a basic ELSE ction
-                # print(f"ELSE ident: {indent}")
+                # #print(f"ELSE ident: {indent}")
                 # action_ = python.Action(self.gx, "ELSE", action, indent, self)
                 # self.live_event.actions.append(action_)
                 # indent += 1

@@ -2,6 +2,7 @@
 #include <cstring>
 #include "udf.h"
 
+
 //@@decoder: SynerPMessageHeader_t
 void SynerPMessageHeaderDecode(std::vector<char>& buffer, SynerPMessageHeader_t &msg_header_struct, size_t &buffer_size) {
     // if (buffer.size() < HEADER_SIZE) return; // Error: Buffer too small
@@ -11,7 +12,7 @@ void SynerPMessageHeaderDecode(std::vector<char>& buffer, SynerPMessageHeader_t 
 }
 
 // @@encoder: SynerPMessage_t
-void SynerPMessageEncode(SynerPMessage_t &msg_struct, std::vector<char>& buffer, size_t &buffer_size) {
+void SynerPMessageEncode(std::vector<char>& buffer, SynerPMessage_t &msg_struct, size_t &buffer_size) {
     // Calculate the total size of the message
     // without null termination.
     msg_struct.header.size = HEADER_SIZE; // 1 for cmd, 1 for size
@@ -65,7 +66,7 @@ void SynerPMessageEncode(SynerPMessage_t &msg_struct, std::vector<char>& buffer,
 }
 
 // @@decoder: SynerPMessage_t
-void SynerPMessageDecode(std::vector<char>& buffer, SynerPMessage_t &msg_struct, size_t &buffer_size) {
+void SynerPMessageDecode(SynerPMessage_t &msg_struct, std::vector<char>& buffer, size_t &buffer_size) {
     size_t offset = 0;
     
     // Decode the message header
@@ -113,7 +114,7 @@ std::string generate_login_response(_e_SynerPLoginResponse r_type) {
 
 std::string get_timer_name(_e_TimerType t_type) {
     switch (t_type) {
-        case T_LOGIN_FORGET: 
+        case _e_TimerType::T_LOGIN_FORGET: 
             return "T_LOGIN_FORGET";
             break;
         default:

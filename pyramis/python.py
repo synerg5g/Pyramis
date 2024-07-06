@@ -19,7 +19,7 @@ def parse_file(name):
     try:
         return ast.parse(filebuf)
     except SyntaxError as s:
-        print("*ERROR* %s:%d: %s" % (name, s.lineno, s.msg))
+        #print("*ERROR* %s:%d: %s" % (name, s.lineno, s.msg))
         sys.exit(1)
 
 def get_arg_name(node, is_tuple_expansion=False):
@@ -129,7 +129,7 @@ class Module(PyObject):
             if _inc == -1: # no includes yet.
                 _generated += "#include " + "\"" + str(_plat) + "\"" + _udf_h
             else:
-                print(_udf_h[:_inc + 1])
+                #print(_udf_h[:_inc + 1])
                 if "__BUILD__" in _udf_h[:_inc]:
                     _generated = _udf_h
                 else:
@@ -174,11 +174,15 @@ class Module(PyObject):
                     decl_defaults = "size_t sockfd, struct nfvInstanceData *nfvInst"
                     call_defaults = "sockfd, nfvInst"
                 
-                # if keygen udf not in actions, decl must have procedure_key
-                if not any(action.is_keygen for action in event.actions) and not any(v.name == self.procedure_key.name for v in event.vars):
-                    decl_defaults += f", {self.procedure_key.type.to_str()} {self.procedure_key.name}"
-                    call_defaults += f", {self.procedure_key.name}"
-                    event.key_in_decl = True
+                # if procedure key never invoked:
+                if not self.procedure_key.name:
+                    error.error("This NF is not tracking procedure instances.", warning=True)
+                else:
+                    # if keygen udf not in actions, decl must have procedure_key
+                    if not any(action.is_keygen for action in event.actions) and not any(v.name == self.procedure_key.name for v in event.vars):
+                            decl_defaults += f", {self.procedure_key.type.to_str()} {self.procedure_key.name}"
+                            call_defaults += f", {self.procedure_key.name}"
+                            event.key_in_decl = True
             else:
                 decl_defaults = "struct nfvInstanceData *nfvInst"
                 call_defaults = "nfvInst"
@@ -326,7 +330,7 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
         self.generated.append(_includes)
 
         # do stuff, fill self.generated.
-        print(len(self.gx.maps))
+        #print(len(self.gx.maps))
         for map in self.gx.maps.values():
             _map = ""
             _attrs = ""
@@ -361,7 +365,7 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
         self.generated.append(_guard)
 
         # gen include headers
-        # print(f'\"{self.gx.utility_lib}/common/include/datatypes.h\"')
+        # #print(f'\"{self.gx.utility_lib}/common/include/datatypes.h\"')
         _inc = [f'\"{self.gx._utility_lib}/common/include/datatypes.h\"', '<map>', '<set>', 
                 '<sys/timerfd.h>', '<sys/epoll.h>', '<unistd.h>', 
                 '<string.h>', '<iostream>', '<queue>', '<sys/eventfd.h>', '<variant>']
@@ -409,7 +413,7 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
 
         # gen timer context structs from gx.timer_contexts
         # need to add a field for _e_timer_type along with procedure_key for STOP timer find.
-        print([ctx._name for ctx in self.gx.timer_contexts.values()])
+        #print([ctx._name for ctx in self.gx.timer_contexts.values()])
         _structs = ""
         for ctx in self.gx.timer_contexts.values():
             _struct = ""
@@ -468,7 +472,7 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
         async_callbacks = ""
         for _inf in self.gx.interfaces.values():
             for event in self.events.values():
-                print(event.name, *_inf.processing) # single callback for each interface.
+                #print(event.name, *_inf.processing) # single callback for each interface.
                 _cb = _inf.processing[0]
                 if event.name == _cb:
                     async_callbacks += event.decl + ";\n"
@@ -484,7 +488,7 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
         self.generated.append(_ifv)
 
         # initialise user-locks
-        print(self.locks)
+        #print(self.locks)
         _locks = ""
         for _lock in self.locks:
             _locks += "pthread_mutex_t " + _lock + " = PTHREAD_MUTEX_INITIALIZER;\n"
@@ -504,11 +508,11 @@ void generic_timer_stop(auto timerfd_it, struct nfvInstanceData *nfvInst) {
 
         for _inf in self.gx.interfaces.values():
             _register = ""
-            print(_inf.processing[0], self.events)
+            #print(_inf.processing[0], self.events)
             if _inf.processing[0] in [event.name for event in self.events.values()]:
                 _register += "\tport_request_handler_map[" + str(_inf.port) + "] = " + _inf.processing[0] + ";\n"
-            else:
-                print("WARNING: ... server entry callback is not defined.")
+            #else:
+                #print("WARNING: ... server entry callback is not defined.")
             _main += _register
         
         self.generated.append(_main)
@@ -590,7 +594,7 @@ class Event:
 
         # update self.generated.
         for action in self.actions:
-            print(f"Indent: {action.indent}")
+            #print(f"Indent: {action.indent}")
             try:
                 self.generated.append(action.indent * "\t")
             except:
@@ -626,7 +630,7 @@ class Event:
                     
             action.emit(module, self) # do p_m_l for store/lookup, do access
 
-            print(f"{action.name} exits {action.exits} scopes")
+            #print(f"{action.name} exits {action.exits} scopes")
             self.generated.append(action.generated + action.indent* "\t" + action.exits * "}" + "\n")
 
             module.previous_action = action
@@ -655,7 +659,7 @@ class Action:
         emitters = {
             action.lower(): getattr(self, f"emit_{action.lower()}") for action in Action.pyramis_actions
         }
-        print(self.name.lower())
+        #print(self.name.lower())
         if self.name.lower() in emitters:
             emitters[self.name.lower()](module, event)
         else:
@@ -695,7 +699,7 @@ class Action:
         # size_t simple_enc_sz {};
         # std::vector<char> simple_enc(MAX_MESSAGE_SIZE, 0);
         # SynerPMessageEncode(simple, simple_enc, simple_enc_sz); // null added.
-        print([var.name for var in self.vars[1:]])
+        #print([var.name for var in self.vars[1:]])
         _sz = self.vars[-1]
         self.generated += _sz.type.to_str() + " " + _sz.name + " {};\n"
 
@@ -716,25 +720,40 @@ class Action:
 
     def emit_udf(self, module, event):
         # declare all undeclared args
+        _pre = ""
         for _arg in self.vars[2:]:
             if "MACRO" in _arg.name:
                 _arg.name = _arg.name.split("(")[1][:-1]
+                _arg.macro = True
+            elif not _arg.defined:
+                _pre += _arg.type_to_str() + " " + _arg.name + " {};\n"
 
         _fn = self.vars[1]
         _ret_id = self.vars[0]
-        if _ret_id.undecl:
-            self.generated += _ret_id.type.to_str() + " " + _ret_id.name + " = "
-        self.generated += _fn + "("
-
+        
         _args= ""
         for _arg in self.vars[2:]:
             if (len(self.vars[2:]) == 1):
+                self.generated += _pre
+                if _ret_id.undecl:
+                    self.generated += _ret_id.type.to_str() + " " + _ret_id.name + " = "
+
+                self.generated += _fn + "("
+                
                 _args += _arg.name
                 self.generated += _args + ");\n"
                 return
             else:
                 _args += _arg.name + ", "
         _args = _args[:-2] # remove comma
+
+        self.generated += _pre
+
+        if _ret_id.undecl:
+            self.generated += _ret_id.type.to_str() + " " + _ret_id.name + " = "
+
+        self.generated += _fn + "("
+
         self.generated += _args + ");\n"
 
     def emit_set(self, module, event):
@@ -779,7 +798,7 @@ class Action:
                     else:
                         self.generated += _lhs.type.to_str() + " " + _lhs.name + " = " + _rhs.name + ";\n"
         elif not _lhs.undecl: # dotted always undecl = False
-            print(id(_lhs))
+            #print(id(_lhs))
             if _lhs.in_timer_ctx: # setting an attribute of ctx.
                 # std::get<..>(_root)._stem = _rhs.name
                 self.generated += "std::get<" + ctx_type_t + ">(" + _ctx_root + ")." + _ctx_stem + " = " + _rhs.name + ";\n"
@@ -833,7 +852,7 @@ class Action:
 
         _defaults = event.call_defaults
         _args += _defaults
-        print(_args)
+        #print(_args)
 
         self.generated += _args + ");\n"
         
@@ -942,9 +961,9 @@ class Action:
         
         self.generated += _length
 
-        print("lookie here")
-        for var in event.vars:
-            print(var.name)
+        #print("lookie here")
+        # for var in event.vars:
+        #     print(var.name)
         
         if not event.key_in_decl:
             self.generated += _procedure_key
@@ -953,7 +972,7 @@ class Action:
         
     def emit_loop(self, module, event):
         self.generated += "for ("
-        print(self.vars)
+        #print(self.vars)
         _itr = self.vars[0]
         _low = self.vars[1]
         _high  = self.vars[2]
@@ -966,8 +985,8 @@ class Action:
         '''
         cond
         '''
-        print("conds are %s"%[var for var in self.vars])
-        print(len(self.vars))
+        #print("conds are %s"%[var for var in self.vars])
+        #print(len(self.vars))
         self.generated += "if ("
 
         cond = ""
@@ -1024,7 +1043,7 @@ class Action:
 
     def emit_timer_start(self, module, event):
         #self.vars[-1] = "&" + self.vars[-1] # callback
-        print(self.vars)
+        #print(self.vars)
         _timer_type, _timeout, _ctx, _callback = self.vars
         _args = ", ".join(self.vars)
 
@@ -1100,9 +1119,13 @@ class Variable:
         self.invisible = False # not in C++
         self.formal_arg = False
         self.seq_alias = None
+
         self.undecl = undecl
+        self.defined = False
+
         self.in_timer_ctx = False
         self.timer_ctx_macro = None
+        self.macro = False
 
         # assign self.type from somewhere.
         if isinstance(type, list):
@@ -1144,7 +1167,7 @@ class Map:
     
     def add_to_map_struct(self, variable):
         # add_to_map only after type_lookup
-        assert(variable.type) # only refs to typed variables must be added to map
+        assert(variable.type) # only refs to typed variables must be added to map. DO NOT MODIFY.
         self.struct.vars[variable.name] = variable
 
 class Timer:
@@ -1188,22 +1211,22 @@ class Type:
         list of attributes encountered in the path to that sub attribute
         '''
         path = []
-        # print(f"enter {self.ident}")
-        # print(f"{self.ident} has subs {self.subs}")
-        # print(f"{self.ident} is of thing type {self.thing}")
+        # #print(f"enter {self.ident}")
+        # #print(f"{self.ident} has subs {self.subs}")
+        # #print(f"{self.ident} is of thing type {self.thing}")
         # for sub in self.subs.values():
-        #     print(sub.ident, sub.thing)
+        #     #print(sub.ident, sub.thing)
         if not self.subs:
             if self.thing == thing:
-                print("found thing")
+                #print("found thing")
                 return self
             return []
         for attr_id, sub_type in self.subs.items():
-            print(f"Check attr {attr_id}")
+            #print(f"Check attr {attr_id}")
             if isinstance(sub_type, list):
                 for _sub in sub_type:
                     if _sub.thing == thing:
-                        print(f"{_sub} has {thing}")
+                        #print(f"{_sub} has {thing}")
                         path.append(attr_id)
                         return path
                     else:
@@ -1213,16 +1236,16 @@ class Type:
                         path.extend(sub_path)
                         return path
             else:
-                # print(f"{attr_id} has a unique single type")
-                # print(self.subs[attr_id])
-                # print(sub_type.ident, sub_type.thing)
-                # print(self.thing)
+                # #print(f"{attr_id} has a unique single type")
+                # #print(self.subs[attr_id])
+                # #print(sub_type.ident, sub_type.thing)
+                # #print(self.thing)
                 if self.thing == thing:
-                    #print(f"{sub_type.ident} has {thing}")
+                    ##print(f"{sub_type.ident} has {thing}")
                     path.append(attr_id)
                     return path
                 if sub_type.thing == thing:
-                    #print(f"{sub_type.ident} has {thing}")
+                    ##print(f"{sub_type.ident} has {thing}")
                     path.append(attr_id)
                     return path
                 else:
@@ -1244,14 +1267,25 @@ class Type:
         
         for sub in self.subs:
             if isinstance(self.subs[sub], list):
-                print(self.subs[sub])
+                #print(self.subs[sub])
                 for _t in self.subs[sub]:
-                    print(_t.to_str())
-                    print(_t.subs)
-            res, type = self.subs[sub]._contains(attr)
+                    res, type = _t._contains(attr)
+                    if res:
+                        assert(type)
+                        return res, type
+            else:
+                res, type = self.subs[sub]._contains(attr)  
             if res:
                 return res, type
         return False, None 
+    
+    def _pick_type(self):
+        '''
+        If the base types have multiple definitions for the same
+        struct names, this function defines logic to return a single type.
+        ??????
+        '''
+        pass
     
     def get_typeof(self, attr):
         '''
