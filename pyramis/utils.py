@@ -150,7 +150,7 @@ class Parser:
         self._stripped_utility_lib = gx._pyramis / ".deps/stripped"
         self.outfile = outfile
 
-    def parse_lib(self): # create a dict?
+    def parse_lib(self, _h=False): # create a dict?
         '''
         Create an intermediate dict
         to represent the asn builtin types.
@@ -166,6 +166,17 @@ class Parser:
                     file_parser.parse_header()
                     self.parsed_parsers[str(file_parser.current_file)] = file_parser # each file will have a key
         
+        # create .pyramis/pyramis.h
+        if _h:
+            _inc = ""
+            for parsed_file in self.parsed_parsers:
+                print(parsed_file)
+                _inc += "#include \"" + parsed_file + "\"\n"
+            
+            _pyramis_h = self.gx._pyramis / "pyramis.h"
+            with open(_pyramis_h, "w") as f_pyramis_h_w:
+                f_pyramis_h_w.write(_inc)
+
         return self.struct_types_to_json()
 
     def struct_types_to_json(self):

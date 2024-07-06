@@ -154,6 +154,7 @@ class Module(PyObject):
         self.generated.append(_guard)
 
         _inc = ["\"../../udf.h\"", f"\"{self.gx.nf_name}_platform.h\"", f"\"{self.gx.nf_name}_contexts.h\"",
+                f"\"{self.gx._pyramis}/pyramis.h\"",
                 "<algorithm>"]
         _includes = ""
         for __inc in _inc:
@@ -548,10 +549,19 @@ DEPS_DIR = $(BUILD_DIR)/.deps
         _target_name = self.gx.nf_name
         _target = ""
         _target += _target_name + ": "
-        _target += "$(DEPS_DIR)/NF_A_linking.o $(DEPS_DIR)/platform.o $(DEPS_DIR)/udf.o $(DEPS_DIR)/logging.o\n"
-        _target += f"\t@$(CC) $(CFLAGS) $(DEPS_DIR)/NF_A_linking.o $(DEPS_DIR)/platform.o $(DEPS_DIR)/udf.o $(DEPS_DIR)/logging.o -o $(BUILD_DIR)/{_target_name} $(LDFLAGS)\n\n"
+        _target += f"$(DEPS_DIR)/{_target_name}_linking.o $(DEPS_DIR)/platform.o $(DEPS_DIR)/udf.o $(DEPS_DIR)/logging.o\n"
+        _target += f"\t@$(CC) $(CFLAGS) $(DEPS_DIR)/{_target_name}_linking.o $(DEPS_DIR)/platform.o $(DEPS_DIR)/udf.o $(DEPS_DIR)/logging.o -o $(BUILD_DIR)/{_target_name} $(LDFLAGS)\n\n"
         self.generated.append(_target)
-    
+
+        _next = ""
+        _next += "$(DEPS_DIR)/" + _target_name + "_linking.o: " + _target_name + "_linking.cpp | $(DEPS_DIR)\n"
+        _next +=  "\t@$(CC) $(CFLAGS) -c " + _target_name + "_linking.cpp -o $(DEPS_DIR)/" + _target_name + "_linking.o\n\n"
+        self.generated.append(_next)
+
+        _after = ""
+        _after += f"$(DEPS_DIR)/platform.o: {_target_name}_platform.cpp | $(DEPS_DIR)\n"
+        _after += f"\t@$(CC) $(CFLAGS) -c {_target_name}_platform.cpp -o $(DEPS_DIR)/platform.o\n\n"
+
         _rest = ""
         _mk = self.gx._pyramis / "Makefile.txt"
         with open(_mk, "r") as  f_mk_r:
@@ -725,7 +735,7 @@ class Action:
             if "MACRO" in _arg.name:
                 _arg.name = _arg.name.split("(")[1][:-1]
                 _arg.macro = True
-            elif not _arg.defined:
+            elif not _arg.defined and "." not in _arg.name:
                 _pre += _arg.type_to_str() + " " + _arg.name + " {};\n"
 
         _fn = self.vars[1]

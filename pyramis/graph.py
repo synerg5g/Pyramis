@@ -145,7 +145,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         # XXX TODO
     
     def visit_FunctionDef(self, node, parent=None):
-        #print(f"Visiting {type(node)} i.e. EVENT {node.name}")
+        print(f"Visiting {type(node)} i.e. EVENT {node.name}")
         _, indent = infer.enter_new_scope(self, infer.Scope.EVENT)
 
         if node.name in getmv().events:
@@ -210,6 +210,9 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 event.vars.append(var)
 
                 infer.add_var_to_live_scope(self, var)  # scope.symtab[j] = var(j) etc.
+        
+        for _v in event.vars:
+            _v.defined = True
 
         self.events[event.name] = event # event without actions
         
@@ -218,7 +221,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         for body_node in node.body:
             self.visit(body_node, node, indent) # parent of all the nodes being visited == ast.Functiondef
 
-        # #print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
+        #print(f"Finished visiting sub-nodes of {type(node)} i.e. EVENT {node.name}")
         # exit scope
         self.module.events[node.lineno] = event # event with actions
 
@@ -233,7 +236,7 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
         assert isinstance(node.func, ast.Name)
         # Create action
         action = python.Action(self.gx, node.func.id, parent, _indent, self)
-        #print(f"Visiting action {action.name}, parent = {parent}")
+        print(f"Visiting action {action.name}, parent = {parent}")
         #print(f"action indent: {_indent}")
 
         self.live_action = action
@@ -653,11 +656,10 @@ class ModuleVisitor(ast_utils.BaseNodeVisitor):
                 
                 attr = args[2].value
                 attr_v = infer.get_variable(self, 2, attr, action) # 
+
+                attr_val = args[3].value
+                attr_val_v = infer.get_variable(self, 3, attr_val, action)
                 if not attr_v.type:
-                    # get type from last arg
-                    attr_val = args[3].value
-                    attr_val_v = infer.get_variable(self, 3, attr_val, action)
-                    #assert(attr_val_v.type)
                     attr_v.type = attr_val_v.type
 
                 map.add_to_map_struct(attr_v)

@@ -77,17 +77,17 @@ def add_var_to_live_scope(mv, var):
     in case the protocol library has multiple structs with the same
     name.
     '''
-    ##print(f"adding var to scope: {var}: {var.type}")
-    # if (var.type):
-    #     print(f"... of type {var.type.ident}")
+    print(f"adding var to scope: {var}: {var.type}")
+    if (var.type):
+        print(f"... of type {var.type.ident}")
 
     if var.name not in mv.live_scope.symtab:
         # first instance of the var in this scope
-        #print(f"First instance of {var.name} in this scope, {mv.live_scope.kind}")
+        print(f"First instance of {var.name} in this scope, {mv.live_scope.kind}")
         mv.live_scope.symtab[var.name] = var
     elif var.type and (not mv.live_scope.symtab[var.name].type):
         # definitely overwrite type
-        ##print(f"previously untyped variable is now typed, {var.name}: {var.type.ident}")
+        print(f"previously untyped variable is now typed, {var.name}: {var.type.ident}")
         mv.live_scope.symtab[var.name].type = var.type
     else:
         # overwrite type?
@@ -95,7 +95,7 @@ def add_var_to_live_scope(mv, var):
         ##print(f"Avoided overwrting with new value {var.name}: {var.type.ident}")
         mv.live_scope.symtab[var.name].type = var.type
     
-    #print(f"scope is now: {mv.live_scope.symtab.keys()}")
+    print(f"scope is now: {mv.live_scope.symtab.keys()}")
 
 C_TYPES = [
     "char",
@@ -146,7 +146,7 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
     curr_scope = mv.live_scope
     while(curr_scope.kind != Scope.MODULE):
         if (ident in curr_scope.symtab):
-            #print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
+            print(f"{ident} found in scope {curr_scope} of kind {curr_scope.kind}")
             try:
                 print(f"type: {curr_scope.symtab[ident].type.ident}")
             except:
@@ -155,9 +155,9 @@ def get_variable_from_scope(mv, arg_idx, parent, ident):
             return curr_scope.symtab[ident]
         else:
             # climb parent
-            #print(f"{ident} not found here, moving up")
+            print(f"{ident} not found here, moving up")
             curr_scope = curr_scope.encloser
-    #print(f"{ident} not found in scope traversal")
+    print(f"{ident} not found in scope traversal")
     return None
 
 # search for an arg in the local scope tree

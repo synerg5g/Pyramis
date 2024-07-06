@@ -311,7 +311,7 @@ class GlobalInfo:
     def generate_builtins(self):
         # Initialise asn_base_types
         pyramis_parser = utils.Parser(self, self._utility_lib, self.pyramis_message_types_path)
-        all_pyramis_types = pyramis_parser.parse_lib()
+        all_pyramis_types = pyramis_parser.parse_lib(True)
         self.pyramis_base_types = consolidate_duplicate_types(all_pyramis_types)
         #print(len(self.pyramis_base_types))
         # for k, v in self.pyramis_base_types.items():
