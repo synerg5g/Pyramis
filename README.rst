@@ -30,7 +30,6 @@ PyPI (Python)
 .. code-block:: bash
 
    cd pyramis/examples/login-server/Server
-   pyramis translate NF_A
    pyramis build NF_A
    pyramis run NF_A 1
 
