@@ -35,8 +35,13 @@ void SynerPMessageEncode(std::vector<char>& buffer, SynerPMessage_t &msg_struct,
 void SynerPMessageDecode(SynerPMessage_t &msg_struct, std::vector<char>& buffer, size_t &buffer_size);
 
 
-//int nasMessagePlainDecode(nasMessage_t &nasMessage, uint8_t *buffer, uint32_t decodedLen);
-//int ngapGetNasPdu(NAS_PDU_t &naPdu, NGAP_PDU_t *ngapPdu);
+// int nasMessagePlainDecode(nasMessage_t &nasMessage, uint8_t *buffer, uint32_t decodedLen);
+// int ngapGetNasPdu(NAS_PDU_t &naPdu, NGAP_PDU_t *ngapPdu);
+// int ngapGetRanUeNgapId(RAN_UE_NGAP_ID_t &ranUeid, NGAP_PDU_t *ngapPdu);
+// int ngapGetAmfUeNgapId(AMF_UE_NGAP_ID_t &amfUeId, NGAP_PDU_t *ngapPdu);
+// int retrieveMobileIdentity(suci_t &_suci, RegistrationRequest_t *regRequest);
+// int suciSchemeToImsi(std::string &suci_imsi, suci_t &SUCI);
+// int generateAmfUeNgapId(AmfUeNgapId_t &amfUeNgapId);
 
 
 // create a custom response string
