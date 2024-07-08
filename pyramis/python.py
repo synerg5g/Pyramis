@@ -118,22 +118,30 @@ class Module(PyObject):
         '''
         add platform.h to udf file
         '''
+        print("fixup")
         _plat = self.gx.output_dir / f"{self.gx.nf_name}_platform.h"
         _udf = self.gx.udfs_path
 
         _generated = ""
-        with open(_udf, "r") as f_udf_r:
-            _udf_h = f_udf_r.read()
-            _inc = _udf_h.find("#include") # first include
+        with open(_udf, "r", encoding="utf-8") as f_udf_r:
+            _udf_h_r = f_udf_r.read()
+            f_udf_r.seek(0)
+            _udf_h_l = f_udf_r.readlines()
+            _inc = _udf_h_r.find("#include") # first include
+            
+            _recompile = False
+            for line in _udf_h_l:
+                if line.startswith("#include") and "__BUILD__" in line:
+                    _recompile = True
+                    break
 
             if _inc == -1: # no includes yet.
-                _generated += "#include " + "\"" + str(_plat) + "\"" + _udf_h
+                _generated += "#include " + "\"" + str(_plat) + "\"" + _udf_h_r
             else:
-                #print(_udf_h[:_inc + 1])
-                if "__BUILD__" in _udf_h[:_inc]:
-                    _generated = _udf_h
+                if _recompile: # some header already included
+                    _generated = _udf_h_r
                 else:
-                    _generated = _udf_h[:_inc] + "#include " + "\"" + str(_plat) + "\""  + "\n" + _udf_h[_inc:]
+                    _generated = _udf_h_r[:_inc] + "#include " + "\"" + str(_plat) + "\""  + "\n" + _udf_h_r[_inc:]
         self.generated.append(_generated)
 
         self.write_to_file(_udf)
@@ -154,8 +162,8 @@ class Module(PyObject):
         self.generated.append(_guard)
 
         _inc = ["\"../../udf.h\"", f"\"{self.gx.nf_name}_platform.h\"", f"\"{self.gx.nf_name}_contexts.h\"",
-                f"\"{self.gx._pyramis}/pyramis.h\"",
                 "<algorithm>"]
+        #_inc.append(f"\"{self.gx._pyramis}/pyramis.h\"")
         _includes = ""
         for __inc in _inc:
             _includes += "#include " + __inc + "\n"
