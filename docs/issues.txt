@@ -1,0 +1,1 @@
+- in udf_fixup, e_timer_type is assumed to be known by the user, but it is created by the translator during compilation.
