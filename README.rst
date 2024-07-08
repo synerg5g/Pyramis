@@ -30,7 +30,6 @@ PyPI (Python)
 .. code-block:: bash
 
    cd pyramis/examples/login-server/Server
-   pyramis translate NF_A
    pyramis build NF_A
    pyramis run NF_A 1
 
@@ -64,7 +63,7 @@ Next, navigate to the root directory of your project and **run Pyramis commands 
 +-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | Task                                          | Command Line                                                                                        | Result                                                                      |
 +===============================================+=====================================================================================================+=============================================================================+
-| Validate Pyramis Specification                || ``$ pyramis translate NF_A``                                                                       || The Pyramis Compiler will generate an error-report for any irregularities  |
+| Validate Pyramis Specification                || ``$ pyramis analyze NF_A``                                                                         || The Pyramis Compiler will generate an error-report for any irregularities  |
 +-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
 | Build C++ Implementation                      || ``$ pyramis build NF_A``                                                                           || A set of .cpp and .h files will be generated along with a base Makefile.   |
 +-----------------------------------------------+-----------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------+
